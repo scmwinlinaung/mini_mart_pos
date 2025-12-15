@@ -1,6 +1,6 @@
 import 'package:mini_mart_pos/data/models/product.dart';
 import 'package:postgres/postgres.dart';
-import '../database_service.dart';
+import 'package:mini_mart_pos/data/database_service.dart';
 
 class PosRepository {
   final DatabaseService _dbService;
@@ -16,7 +16,7 @@ class PosRepository {
     );
 
     if (result.isEmpty) return null;
-    return Product.fromSql(result.first.toColumnMap());
+    return Product.fromMap(result.first.toColumnMap());
   }
 
   // Execute Sale Transaction
@@ -45,7 +45,7 @@ class PosRepository {
           '''),
           parameters: {
             'sid': saleId,
-            'pid': item.product.id,
+            'pid': item.product.productId,
             'qty': item.quantity,
             'price': item.product.sellPrice,
             'total': item.total,

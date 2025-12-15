@@ -1,41 +1,273 @@
 class Product {
-  final int id;
+  final int productId;
   final String barcode;
-  final String name;
+  final String productName;
+  final String? description;
+  final int categoryId;
+  final String? categoryName;
+  final int supplierId;
+  final String? supplierName;
+  final int costPrice; // In cents
   final int sellPrice; // In cents
   final int stockQuantity;
+  final int reorderLevel;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   Product({
-    required this.id,
+    required this.productId,
     required this.barcode,
-    required this.name,
+    required this.productName,
+    this.description,
+    required this.categoryId,
+    this.categoryName,
+    required this.supplierId,
+    this.supplierName,
+    required this.costPrice,
     required this.sellPrice,
     required this.stockQuantity,
+    this.reorderLevel = 10,
+    this.isActive = true,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory Product.fromSql(Map<String, dynamic> row) {
+  factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
-      id: row['product_id'],
-      barcode: row['barcode'],
-      name: row['product_name'],
-      sellPrice: row['sell_price'],
-      stockQuantity: row['stock_quantity'],
+      productId: map['product_id'] as int,
+      barcode: map['barcode'] as String,
+      productName: map['product_name'] as String,
+      description: map['description'] as String?,
+      categoryId: map['category_id'] as int? ?? 0,
+      categoryName: map['category_name'] as String?,
+      supplierId: map['supplier_id'] as int? ?? 0,
+      supplierName: map['supplier_name'] as String?,
+      costPrice: map['cost_price'] as int? ?? 0,
+      sellPrice: map['sell_price'] as int,
+      stockQuantity: map['stock_quantity'] as int? ?? 0,
+      reorderLevel: map['reorder_level'] as int? ?? 10,
+      isActive: map['is_active'] as bool? ?? true,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
     );
   }
 
-  // Helper for UI
-  double get priceDouble => sellPrice / 100.0;
+  Map<String, dynamic> toMap() {
+    return {
+      'product_id': productId,
+      'barcode': barcode,
+      'product_name': productName,
+      'description': description,
+      'category_id': categoryId,
+      'category_name': categoryName,
+      'supplier_id': supplierId,
+      'supplier_name': supplierName,
+      'cost_price': costPrice,
+      'sell_price': sellPrice,
+      'stock_quantity': stockQuantity,
+      'reorder_level': reorderLevel,
+      'is_active': isActive,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  Product copyWith({
+    int? productId,
+    String? barcode,
+    String? productName,
+    String? description,
+    int? categoryId,
+    String? categoryName,
+    int? supplierId,
+    String? supplierName,
+    int? costPrice,
+    int? sellPrice,
+    int? stockQuantity,
+    int? reorderLevel,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Product(
+      productId: productId ?? this.productId,
+      barcode: barcode ?? this.barcode,
+      productName: productName ?? this.productName,
+      description: description ?? this.description,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      supplierId: supplierId ?? this.supplierId,
+      supplierName: supplierName ?? this.supplierName,
+      costPrice: costPrice ?? this.costPrice,
+      sellPrice: sellPrice ?? this.sellPrice,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
+      reorderLevel: reorderLevel ?? this.reorderLevel,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  // Helper getters for UI
+  double get sellPriceDouble => sellPrice / 100.0;
+  double get costPriceDouble => costPrice / 100.0;
+  double get profitMargin => sellPrice > 0 ? ((sellPrice - costPrice) / sellPrice) * 100 : 0;
+  String get formattedSellPrice => '\$${(sellPrice / 100).toStringAsFixed(2)}';
+  String get formattedCostPrice => '\$${(costPrice / 100).toStringAsFixed(2)}';
+  bool get isLowStock => stockQuantity <= reorderLevel;
+  bool get isOutOfStock => stockQuantity <= 0;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Product &&
+          runtimeType == other.runtimeType &&
+          productId == other.productId &&
+          barcode == other.barcode;
+
+  @override
+  int get hashCode => productId.hashCode ^ barcode.hashCode;
+
+  @override
+  String toString() {
+    return 'Product{productId: $productId, barcode: $barcode, productName: $productName, sellPrice: $formattedSellPrice, stock: $stockQuantity}';
+  }
 }
 
 class CartItem {
   final Product product;
   final int quantity;
+  final int unitPrice; // Price at time of adding to cart (in cents)
 
-  CartItem({required this.product, required this.quantity});
+  CartItem({
+    required this.product,
+    required this.quantity,
+    int? unitPrice,
+  }) : unitPrice = unitPrice ?? product.sellPrice;
 
-  int get total => product.sellPrice * quantity;
+  int get total => unitPrice * quantity;
+  double get totalDouble => total / 100.0;
+  String get formattedTotal => '\$${(total / 100).toStringAsFixed(2)}';
+  String get formattedUnitPrice => '\$${(unitPrice / 100).toStringAsFixed(2)}';
 
-  CartItem copyWith({int? quantity}) {
-    return CartItem(product: product, quantity: quantity ?? this.quantity);
+  CartItem copyWith({
+    Product? product,
+    int? quantity,
+    int? unitPrice,
+  }) {
+    return CartItem(
+      product: product ?? this.product,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CartItem &&
+          runtimeType == other.runtimeType &&
+          product == other.product &&
+          quantity == other.quantity;
+
+  @override
+  int get hashCode => product.hashCode ^ quantity.hashCode;
+
+  @override
+  String toString() {
+    return 'CartItem{product: ${product.productName}, quantity: $quantity, total: $formattedTotal}';
+  }
+}
+
+class Category {
+  final int categoryId;
+  final String categoryName;
+
+  Category({
+    required this.categoryId,
+    required this.categoryName,
+  });
+
+  factory Category.fromMap(Map<String, dynamic> map) {
+    return Category(
+      categoryId: map['category_id'] as int,
+      categoryName: map['category_name'] as String,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'category_id': categoryId,
+      'category_name': categoryName,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Category &&
+          runtimeType == other.runtimeType &&
+          categoryId == other.categoryId &&
+          categoryName == other.categoryName;
+
+  @override
+  int get hashCode => categoryId.hashCode ^ categoryName.hashCode;
+
+  @override
+  String toString() {
+    return 'Category{categoryId: $categoryId, categoryName: $categoryName}';
+  }
+}
+
+class Supplier {
+  final int supplierId;
+  final String companyName;
+  final String? contactName;
+  final String? phoneNumber;
+  final String? address;
+
+  Supplier({
+    required this.supplierId,
+    required this.companyName,
+    this.contactName,
+    this.phoneNumber,
+    this.address,
+  });
+
+  factory Supplier.fromMap(Map<String, dynamic> map) {
+    return Supplier(
+      supplierId: map['supplier_id'] as int,
+      companyName: map['company_name'] as String,
+      contactName: map['contact_name'] as String?,
+      phoneNumber: map['phone_number'] as String?,
+      address: map['address'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'supplier_id': supplierId,
+      'company_name': companyName,
+      'contact_name': contactName,
+      'phone_number': phoneNumber,
+      'address': address,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Supplier &&
+          runtimeType == other.runtimeType &&
+          supplierId == other.supplierId &&
+          companyName == other.companyName;
+
+  @override
+  int get hashCode => supplierId.hashCode ^ companyName.hashCode;
+
+  @override
+  String toString() {
+    return 'Supplier{supplierId: $supplierId, companyName: $companyName}';
   }
 }
