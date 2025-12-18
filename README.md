@@ -1,16 +1,16 @@
-# mini_mart_pos
 
-A new Flutter project.
+-- docker
+docker-compose up -d postgres
 
-## Getting Started
+-- drop database
 
-This project is a starting point for a Flutter application.
+docker exec -i mini_mart_pos_db psql -U postgres -d postgres -c "DROP DATABASE mini_mart_pos;"
 
-A few resources to get you started if this is your first Flutter project:
+-- create database
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+docker exec -i mini_mart_pos_db psql -U postgres -d postgres -c "create DATABASE mini_mart_pos;"
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+
+-- create schema
+
+docker exec -i mini_mart_pos_db psql -U postgres -d mini_mart_pos < /Users/winlinaung/Freelance_Prj/mini_mart_pos/schema.sql

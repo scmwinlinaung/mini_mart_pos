@@ -80,7 +80,9 @@ class _PosScreenState extends State<PosScreen> {
                   context: context,
                   builder: (_) => AlertDialog(
                     title: const Text("Error"),
-                    content: Text(state.errorMessage ?? "Unknown error occurred"),
+                    content: Text(
+                      state.errorMessage ?? "Unknown error occurred",
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -181,10 +183,7 @@ class _PosScreenState extends State<PosScreen> {
                           SizedBox(height: 8),
                           Text(
                             'Scan a barcode to add products',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -213,11 +212,13 @@ class _PosScreenState extends State<PosScreen> {
                             ),
                             title: Text(
                               item.product.productName,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             subtitle: Text(
                               'Barcode: ${item.product.barcode}\n'
-                              'Price: ${item.product.formattedSellPrice}',
+                              'Price: ${item.product.sellPrice}',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 12,
@@ -239,9 +240,13 @@ class _PosScreenState extends State<PosScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline),
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                      ),
                                       iconSize: 20,
-                                      onPressed: () => context.read<CartCubit>().updateQuantity(
+                                      onPressed: () => context
+                                          .read<CartCubit>()
+                                          .updateQuantity(
                                             item.product.productId,
                                             item.quantity - 1,
                                           ),
@@ -254,9 +259,13 @@ class _PosScreenState extends State<PosScreen> {
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.add_circle_outline),
+                                      icon: const Icon(
+                                        Icons.add_circle_outline,
+                                      ),
                                       iconSize: 20,
-                                      onPressed: () => context.read<CartCubit>().updateQuantity(
+                                      onPressed: () => context
+                                          .read<CartCubit>()
+                                          .updateQuantity(
                                             item.product.productId,
                                             item.quantity + 1,
                                           ),
@@ -264,9 +273,9 @@ class _PosScreenState extends State<PosScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline),
                                       iconSize: 20,
-                                      onPressed: () => context.read<CartCubit>().removeItem(
-                                            item.product.productId,
-                                          ),
+                                      onPressed: () => context
+                                          .read<CartCubit>()
+                                          .removeItem(item.product.productId),
                                     ),
                                   ],
                                 ),
@@ -292,9 +301,9 @@ class _PosScreenState extends State<PosScreen> {
           // Scanner Input Section
           Text(
             'Add Product',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -380,7 +389,8 @@ class _PosScreenState extends State<PosScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: state.status == CartStatus.processing ||
+                          onPressed:
+                              state.status == CartStatus.processing ||
                                   state.items.isEmpty
                               ? null
                               : () => _handleCheckout(context, 'CASH'),
@@ -400,7 +410,8 @@ class _PosScreenState extends State<PosScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: state.status == CartStatus.processing ||
+                          onPressed:
+                              state.status == CartStatus.processing ||
                                   state.items.isEmpty
                               ? null
                               : () => _handleCheckout(context, 'CARD'),
@@ -417,7 +428,12 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, int amount, BuildContext context, {bool isTotal = false}) {
+  Widget _buildSummaryRow(
+    String label,
+    int amount,
+    BuildContext context, {
+    bool isTotal = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

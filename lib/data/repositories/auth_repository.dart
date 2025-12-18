@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:postgres/postgres.dart';
-import '../database_service.dart';
+import '../../core/services/database_service.dart';
 import 'package:mini_mart_pos/data/models/auth.dart';
 
 class AuthRepository {
@@ -12,7 +12,7 @@ class AuthRepository {
   // Hash password using SHA-256 (in production, use bcrypt or argon2)
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
+    final digest = sha512.convert(bytes);
     return digest.toString();
   }
 
@@ -26,9 +26,10 @@ class AuthRepository {
   Future<LoginResponse> authenticate(String username, String password) async {
     try {
       final conn = await _databaseService.connection;
-
+      final userPasswordHash = _hashPassword(password);
       // Query user with role information
-      final result = await conn.execute(Sql.named('''
+      final result = await conn.execute(
+        Sql.named('''
         SELECT
           u.user_id,
           u.username,
@@ -41,7 +42,9 @@ class AuthRepository {
         FROM users u
         JOIN roles r ON u.role_id = r.role_id
         WHERE u.username = @username AND u.is_active = TRUE
-      '''), parameters: {'username': username});
+      '''),
+        parameters: {'username': username},
+      );
 
       if (result.isEmpty) {
         return LoginResponse.error('Invalid username or password');
@@ -49,12 +52,9 @@ class AuthRepository {
 
       final userRow = result.first;
       final storedHash = userRow[2] as String;
-
       // For demo purposes, check both hashed and plain passwords
       bool isValid = false;
-      if (storedHash == 'hashed_admin_password' && password == 'admin123') {
-        isValid = true;
-      } else if (storedHash == 'hashed_cashier_password' && password == 'cashier123') {
+      if (storedHash.trim() == userPasswordHash.trim()) {
         isValid = true;
       } else {
         isValid = _verifyPassword(password, storedHash);
@@ -64,14 +64,18 @@ class AuthRepository {
         return LoginResponse.error('Invalid username or password');
       }
 
+      final role = userRow[7] != null
+          ? _parseRole(userRow[7] as String)
+          : Role.cashier;
+      print("role = $role");
       final user = User(
-        userId: userRow[0] as int,
+        id: userRow[0] as int,
         username: userRow[1] as String,
-        fullName: userRow[3] as String? ?? '',
-        roleId: userRow[4] as int,
-        roleName: userRow[8] as String?,
-        isActive: userRow[5] as bool,
-        createdAt: DateTime.parse(userRow[6] as String),
+        fullName: userRow[3] as String,
+        password: '', // Not exposed for security
+        role: role,
+        isActive: userRow[5] as bool? ?? true,
+        createdAt: userRow[6] as DateTime,
       );
 
       // Save session to shared preferences
@@ -79,6 +83,7 @@ class AuthRepository {
 
       return LoginResponse.success(user);
     } catch (e) {
+      print("error = $e");
       return LoginResponse.error('Authentication failed: ${e.toString()}');
     }
   }
@@ -99,7 +104,9 @@ class AuthRepository {
   // Generate simple auth token (in production, use JWT)
   String _generateAuthToken() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final randomBytes = Uint8List.fromList(List.generate(16, (_) => timestamp % 256));
+    final randomBytes = Uint8List.fromList(
+      List.generate(16, (_) => timestamp % 256),
+    );
     return base64Encode(randomBytes);
   }
 
@@ -156,14 +163,18 @@ class AuthRepository {
       ''');
 
       return result.map((row) {
+        final role = row[7] != null
+            ? _parseRole(row[7] as String)
+            : Role.cashier;
         return User(
-          userId: row[0] as int,
+          id: row[0] as int,
           username: row[1] as String,
-          fullName: row[2] as String? ?? '',
-          roleId: row[3] as int,
-          roleName: row[6] as String?,
-          isActive: row[4] as bool,
-          createdAt: DateTime.parse(row[5] as String),
+          fullName: row[2] as String,
+          email: row[3] as String? ?? '',
+          password: '',
+          role: role,
+          isActive: row[5] as bool? ?? true,
+          createdAt: DateTime.parse(row[6] as String),
         );
       }).toList();
     } catch (e) {
@@ -177,13 +188,12 @@ class AuthRepository {
     try {
       final conn = await _databaseService.connection;
 
-      final result = await conn.execute('SELECT role_id, role_name FROM roles ORDER BY role_id');
+      final result = await conn.execute(
+        'SELECT role_id, role_name FROM roles ORDER BY role_id',
+      );
 
       return result.map((row) {
-        return Role(
-          roleId: row[0] as int,
-          roleName: row[1] as String,
-        );
+        return _parseRole(row[1] as String);
       }).toList();
     } catch (e) {
       print('Error getting all roles: $e');
@@ -203,15 +213,18 @@ class AuthRepository {
 
       final hashedPassword = _hashPassword(password);
 
-      await conn.execute(Sql.named('''
+      await conn.execute(
+        Sql.named('''
         INSERT INTO users (username, password_hash, full_name, role_id, is_active)
         VALUES (@username, @password, @full_name, @role_id, TRUE)
-      '''), parameters: {
-        'username': username,
-        'password': hashedPassword,
-        'full_name': fullName,
-        'role_id': roleId,
-      });
+      '''),
+        parameters: {
+          'username': username,
+          'password': hashedPassword,
+          'full_name': fullName,
+          'role_id': roleId,
+        },
+      );
 
       return true;
     } catch (e) {
@@ -261,17 +274,23 @@ class AuthRepository {
 
       final Map<String, dynamic> sqlParams = {};
       for (var entry in updates.entries) {
-        sqlParams[entry.key] = parameters[paramIndex - updates.length + updates.keys.toList().indexOf(entry.key)];
+        sqlParams[entry.key] =
+            parameters[paramIndex -
+                updates.length +
+                updates.keys.toList().indexOf(entry.key)];
       }
       sqlParams['user_id'] = userId;
 
       final setClause = updates.keys.map((key) => '$key = @$key').join(', ');
 
-      await conn.execute(Sql.named('''
+      await conn.execute(
+        Sql.named('''
         UPDATE users
         SET $setClause
         WHERE user_id = @user_id
-      '''), parameters: sqlParams);
+      '''),
+        parameters: sqlParams,
+      );
 
       return true;
     } catch (e) {
@@ -285,7 +304,12 @@ class AuthRepository {
     try {
       final conn = await _databaseService.connection;
 
-      await conn.execute(Sql.named('UPDATE users SET is_active = FALSE WHERE user_id = @user_id'), parameters: {'user_id': userId});
+      await conn.execute(
+        Sql.named(
+          'UPDATE users SET is_active = FALSE WHERE user_id = @user_id',
+        ),
+        parameters: {'user_id': userId},
+      );
 
       return true;
     } catch (e) {
@@ -316,6 +340,22 @@ class AuthRepository {
       }
     } catch (e) {
       return false;
+    }
+  }
+
+  Role _parseRole(String roleName) {
+    switch (roleName.toLowerCase()) {
+      case 'admin':
+      case 'စီမံခန့်ခွဲသူ':
+        return Role.admin;
+      case 'manager':
+      case 'မန်နေဂျာ':
+        return Role.manager;
+      case 'cashier':
+      case 'ငွေကိုင်':
+        return Role.cashier;
+      default:
+        return Role.cashier;
     }
   }
 }

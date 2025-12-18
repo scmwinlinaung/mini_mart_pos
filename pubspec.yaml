@@ -18,6 +18,8 @@ dependencies:
   equatable: ^2.0.5 # For value equality in states
   # Dependency Injection (Optional but recommended for BLoC)
   get_it: ^7.6.0
+  # Provider for state management
+  provider: ^6.1.1
   # Database
   postgres: ^3.0.0
   # Barcode scanner
@@ -28,6 +30,12 @@ dependencies:
   uuid: ^4.2.1
   # Password hashing
   crypto: ^3.0.3
+  # Process management for Docker
+  process_run: ^1.2.0
+  # Charts for dashboard
+  fl_chart: ^0.69.2
+  # Internationalization for date formatting
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

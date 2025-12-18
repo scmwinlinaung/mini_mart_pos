@@ -4,8 +4,8 @@ class DatabaseService {
   Connection? _connection;
 
   final Endpoint _endpoint = Endpoint(
-    host: 'localhost',
-    database: 'pos_db',
+    host: '127.0.0.1',
+    database: 'mini_mart_pos',
     username: 'postgres',
     password: 'password', // Update this for production
     port: 5432,
@@ -13,24 +13,39 @@ class DatabaseService {
 
   Future<Connection> get connection async {
     if (_connection != null && _connection!.isOpen) return _connection!;
-    _connection = await Connection.open(_endpoint);
+    _connection = await Connection.open(
+      _endpoint,
+      settings: ConnectionSettings(sslMode: SslMode.disable),
+    );
     return _connection!;
   }
 
   // Initialize database with all tables
   Future<void> initializeDatabase() async {
-    final conn = await connection;
-
+    // First try to connect directly to the database (since Docker is already running)
     try {
+      final conn = await connection;
+      print('✅ Direct database connection successful');
+
       // Create all tables based on the schema
       await _createTables(conn);
       await _insertDefaultData(conn);
       await _createTriggers(conn);
-      print('Database initialized successfully');
-    } catch (e) {
-      print('Error initializing database: $e');
-      rethrow;
+      print('✅ Database initialized successfully');
+      return;
+    } catch (directConnectionError) {
+      print('⚠️  Direct connection failed: $directConnectionError');
     }
+
+    // Fallback: Try to initialize Docker container if needed
+    // final dockerService = DockerService();
+    // final dockerInitialized = await dockerService.initializeDatabase();
+
+    // if (!dockerInitialized) {
+    //   print(
+    //     '⚠️  Docker initialization failed, but will try to connect anyway...',
+    //   );
+    // }
   }
 
   Future<void> _createTables(Connection conn) async {
@@ -195,53 +210,93 @@ class DatabaseService {
     ''');
 
     // Create indexes for performance
-    await conn.execute('CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
-    await conn.execute('CREATE INDEX IF NOT EXISTS idx_sales_invoice_no ON sales(invoice_no)');
-    await conn.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
-    await conn.execute('CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id)');
+    await conn.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)',
+    );
+    await conn.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_invoice_no ON sales(invoice_no)',
+    );
+    await conn.execute(
+      'CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)',
+    );
+    await conn.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id)',
+    );
   }
 
   Future<void> _insertDefaultData(Connection conn) async {
     // Check if data already exists
-    final roleCount = await conn.execute('SELECT COUNT(*) FROM roles').then((result) => result.first.first as int);
+    final roleCount = await conn
+        .execute('SELECT COUNT(*) FROM roles')
+        .then((result) => result.first.first as int);
 
     if (roleCount > 0) return; // Data already exists
 
     // Insert default roles
-    await conn.execute(Sql.named('INSERT INTO roles (role_name) VALUES (@name)'), parameters: {'name': 'Admin'});
-    await conn.execute(Sql.named('INSERT INTO roles (role_name) VALUES (@name)'), parameters: {'name': 'Cashier'});
-    await conn.execute(Sql.named('INSERT INTO roles (role_name) VALUES (@name)'), parameters: {'name': 'Manager'});
+    await conn.execute(
+      Sql.named('INSERT INTO roles (role_name) VALUES (@name)'),
+      parameters: {'name': 'Admin'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO roles (role_name) VALUES (@name)'),
+      parameters: {'name': 'Cashier'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO roles (role_name) VALUES (@name)'),
+      parameters: {'name': 'Manager'},
+    );
 
     // Insert default admin user (password: admin123)
-    await conn.execute(Sql.named('''
+    await conn.execute(
+      Sql.named('''
       INSERT INTO users (username, password_hash, full_name, role_id, is_active)
       VALUES (@username, @password, @full_name, @role_id, @is_active)
-    '''), parameters: {
-      'username': 'admin',
-      'password': 'hashed_admin_password',
-      'full_name': 'System Administrator',
-      'role_id': 1,
-      'is_active': true,
-    });
+    '''),
+      parameters: {
+        'username': 'admin',
+        'password': 'hashed_admin_password',
+        'full_name': 'System Administrator',
+        'role_id': 1,
+        'is_active': true,
+      },
+    );
 
     // Insert default cashier user (password: cashier123)
-    await conn.execute(Sql.named('''
+    await conn.execute(
+      Sql.named('''
       INSERT INTO users (username, password_hash, full_name, role_id, is_active)
       VALUES (@username, @password, @full_name, @role_id, @is_active)
-    '''), parameters: {
-      'username': 'cashier',
-      'password': 'hashed_cashier_password',
-      'full_name': 'Default Cashier',
-      'role_id': 2,
-      'is_active': true,
-    });
+    '''),
+      parameters: {
+        'username': 'cashier',
+        'password': 'hashed_cashier_password',
+        'full_name': 'Default Cashier',
+        'role_id': 2,
+        'is_active': true,
+      },
+    );
 
     // Insert default categories
-    await conn.execute(Sql.named('INSERT INTO categories (category_name) VALUES (@name)'), parameters: {'name': 'Beverages'});
-    await conn.execute(Sql.named('INSERT INTO categories (category_name) VALUES (@name)'), parameters: {'name': 'Snacks'});
-    await conn.execute(Sql.named('INSERT INTO categories (category_name) VALUES (@name)'), parameters: {'name': 'Home & Living'});
-    await conn.execute(Sql.named('INSERT INTO categories (category_name) VALUES (@name)'), parameters: {'name': 'Personal Care'});
-    await conn.execute(Sql.named('INSERT INTO categories (category_name) VALUES (@name)'), parameters: {'name': 'Electronics'});
+    await conn.execute(
+      Sql.named('INSERT INTO categories (category_name) VALUES (@name)'),
+      parameters: {'name': 'Beverages'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO categories (category_name) VALUES (@name)'),
+      parameters: {'name': 'Snacks'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO categories (category_name) VALUES (@name)'),
+      parameters: {'name': 'Home & Living'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO categories (category_name) VALUES (@name)'),
+      parameters: {'name': 'Personal Care'},
+    );
+    await conn.execute(
+      Sql.named('INSERT INTO categories (category_name) VALUES (@name)'),
+      parameters: {'name': 'Electronics'},
+    );
 
     // Insert sample products
     final sampleProducts = [
@@ -278,26 +333,49 @@ class DatabaseService {
     ];
 
     for (var product in sampleProducts) {
-      await conn.execute(Sql.named('''
+      await conn.execute(
+        Sql.named('''
         INSERT INTO products (barcode, product_name, description, category_id, cost_price, sell_price, stock_quantity, reorder_level)
         VALUES (@barcode, @product_name, @description, @category_id, @cost_price, @sell_price, @stock_quantity, @reorder_level)
-      '''), parameters: {
-        'barcode': product['barcode'],
-        'product_name': product['product_name'],
-        'description': product['description'],
-        'category_id': product['category_id'],
-        'cost_price': product['cost_price'],
-        'sell_price': product['sell_price'],
-        'stock_quantity': product['stock_quantity'],
-        'reorder_level': product['reorder_level'],
-      });
+      '''),
+        parameters: {
+          'barcode': product['barcode'],
+          'product_name': product['product_name'],
+          'description': product['description'],
+          'category_id': product['category_id'],
+          'cost_price': product['cost_price'],
+          'sell_price': product['sell_price'],
+          'stock_quantity': product['stock_quantity'],
+          'reorder_level': product['reorder_level'],
+        },
+      );
     }
 
     // Insert default expense categories
-    await conn.execute(Sql.named('INSERT INTO expense_categories (category_name) VALUES (@name)'), parameters: {'name': 'Rent'});
-    await conn.execute(Sql.named('INSERT INTO expense_categories (category_name) VALUES (@name)'), parameters: {'name': 'Utilities'});
-    await conn.execute(Sql.named('INSERT INTO expense_categories (category_name) VALUES (@name)'), parameters: {'name': 'Salary'});
-    await conn.execute(Sql.named('INSERT INTO expense_categories (category_name) VALUES (@name)'), parameters: {'name': 'Supplies'});
+    await conn.execute(
+      Sql.named(
+        'INSERT INTO expense_categories (category_name) VALUES (@name)',
+      ),
+      parameters: {'name': 'Rent'},
+    );
+    await conn.execute(
+      Sql.named(
+        'INSERT INTO expense_categories (category_name) VALUES (@name)',
+      ),
+      parameters: {'name': 'Utilities'},
+    );
+    await conn.execute(
+      Sql.named(
+        'INSERT INTO expense_categories (category_name) VALUES (@name)',
+      ),
+      parameters: {'name': 'Salary'},
+    );
+    await conn.execute(
+      Sql.named(
+        'INSERT INTO expense_categories (category_name) VALUES (@name)',
+      ),
+      parameters: {'name': 'Supplies'},
+    );
   }
 
   Future<void> _createTriggers(Connection conn) async {
@@ -383,6 +461,9 @@ class DatabaseService {
       return await action(txn);
     });
   }
+
+  // Note: Product-related database operations have been moved to services/product_database_service.dart
+// This maintains separation of concerns and better code organization
 
   // Close connection
   Future<void> close() async {

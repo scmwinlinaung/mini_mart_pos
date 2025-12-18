@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mini_mart_pos/data/models/product.dart';
 import 'package:mini_mart_pos/data/repositories/pos_repository.dart';
-import 'package:mini_mart_pos/data/models/auth.dart';
 
 // States
 enum CartStatus { initial, processing, success, failure }

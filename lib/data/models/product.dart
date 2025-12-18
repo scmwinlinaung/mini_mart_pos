@@ -1,3 +1,9 @@
+// Central models export file - imports all model classes
+export 'sales.dart';
+export 'purchases.dart';
+export 'expenses.dart';
+export 'auth.dart';
+
 class Product {
   final int productId;
   final String barcode;
@@ -7,6 +13,9 @@ class Product {
   final String? categoryName;
   final int supplierId;
   final String? supplierName;
+  final int unitTypeId;
+  final String? unitCode;
+  final String? unitName;
   final int costPrice; // In cents
   final int sellPrice; // In cents
   final int stockQuantity;
@@ -24,6 +33,9 @@ class Product {
     this.categoryName,
     required this.supplierId,
     this.supplierName,
+    required this.unitTypeId,
+    this.unitCode,
+    this.unitName,
     required this.costPrice,
     required this.sellPrice,
     required this.stockQuantity,
@@ -43,13 +55,20 @@ class Product {
       categoryName: map['category_name'] as String?,
       supplierId: map['supplier_id'] as int? ?? 0,
       supplierName: map['supplier_name'] as String?,
+      unitTypeId: map['unit_type_id'] as int? ?? 1,
+      unitCode: map['unit_code'] as String?,
+      unitName: map['unit_name'] as String?,
       costPrice: map['cost_price'] as int? ?? 0,
       sellPrice: map['sell_price'] as int,
       stockQuantity: map['stock_quantity'] as int? ?? 0,
       reorderLevel: map['reorder_level'] as int? ?? 10,
       isActive: map['is_active'] as bool? ?? true,
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
+      createdAt: map['created_at'] is DateTime
+          ? map['created_at'] as DateTime
+          : DateTime.parse(map['created_at'] as String),
+      updatedAt: map['updated_at'] is DateTime
+          ? map['updated_at'] as DateTime
+          : DateTime.parse(map['updated_at'] as String),
     );
   }
 
@@ -63,6 +82,9 @@ class Product {
       'category_name': categoryName,
       'supplier_id': supplierId,
       'supplier_name': supplierName,
+      'unit_type_id': unitTypeId,
+      'unit_code': unitCode,
+      'unit_name': unitName,
       'cost_price': costPrice,
       'sell_price': sellPrice,
       'stock_quantity': stockQuantity,
@@ -82,6 +104,9 @@ class Product {
     String? categoryName,
     int? supplierId,
     String? supplierName,
+    int? unitTypeId,
+    String? unitCode,
+    String? unitName,
     int? costPrice,
     int? sellPrice,
     int? stockQuantity,
@@ -99,6 +124,9 @@ class Product {
       categoryName: categoryName ?? this.categoryName,
       supplierId: supplierId ?? this.supplierId,
       supplierName: supplierName ?? this.supplierName,
+      unitTypeId: unitTypeId ?? this.unitTypeId,
+      unitCode: unitCode ?? this.unitCode,
+      unitName: unitName ?? this.unitName,
       costPrice: costPrice ?? this.costPrice,
       sellPrice: sellPrice ?? this.sellPrice,
       stockQuantity: stockQuantity ?? this.stockQuantity,
@@ -110,11 +138,8 @@ class Product {
   }
 
   // Helper getters for UI
-  double get sellPriceDouble => sellPrice / 100.0;
-  double get costPriceDouble => costPrice / 100.0;
-  double get profitMargin => sellPrice > 0 ? ((sellPrice - costPrice) / sellPrice) * 100 : 0;
-  String get formattedSellPrice => '\$${(sellPrice / 100).toStringAsFixed(2)}';
-  String get formattedCostPrice => '\$${(costPrice / 100).toStringAsFixed(2)}';
+  double get profitMargin =>
+      sellPrice > 0 ? ((sellPrice - costPrice) / sellPrice) * 100 : 0;
   bool get isLowStock => stockQuantity <= reorderLevel;
   bool get isOutOfStock => stockQuantity <= 0;
 
@@ -131,7 +156,7 @@ class Product {
 
   @override
   String toString() {
-    return 'Product{productId: $productId, barcode: $barcode, productName: $productName, sellPrice: $formattedSellPrice, stock: $stockQuantity}';
+    return 'Product{productId: $productId, barcode: $barcode, productName: $productName, sellPrice: $sellPrice, stock: $stockQuantity}';
   }
 }
 
@@ -140,22 +165,15 @@ class CartItem {
   final int quantity;
   final int unitPrice; // Price at time of adding to cart (in cents)
 
-  CartItem({
-    required this.product,
-    required this.quantity,
-    int? unitPrice,
-  }) : unitPrice = unitPrice ?? product.sellPrice;
+  CartItem({required this.product, required this.quantity, int? unitPrice})
+    : unitPrice = unitPrice ?? product.sellPrice;
 
   int get total => unitPrice * quantity;
   double get totalDouble => total / 100.0;
   String get formattedTotal => '\$${(total / 100).toStringAsFixed(2)}';
   String get formattedUnitPrice => '\$${(unitPrice / 100).toStringAsFixed(2)}';
 
-  CartItem copyWith({
-    Product? product,
-    int? quantity,
-    int? unitPrice,
-  }) {
+  CartItem copyWith({Product? product, int? quantity, int? unitPrice}) {
     return CartItem(
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,
@@ -183,16 +201,22 @@ class CartItem {
 class Category {
   final int categoryId;
   final String categoryName;
+  final String? description;
 
   Category({
     required this.categoryId,
     required this.categoryName,
+    this.description,
   });
+
+  Category.id({required int id, required this.categoryName, this.description})
+    : categoryId = id;
 
   factory Category.fromMap(Map<String, dynamic> map) {
     return Category(
       categoryId: map['category_id'] as int,
       categoryName: map['category_name'] as String,
+      description: map['description'] as String?,
     );
   }
 
@@ -200,8 +224,15 @@ class Category {
     return {
       'category_id': categoryId,
       'category_name': categoryName,
+      'description': description,
     };
   }
+
+  // Getter for compatibility with existing code
+  int get id => categoryId;
+
+  // Getter for compatibility with existing code
+  String get name => categoryName;
 
   @override
   bool operator ==(Object other) =>
@@ -225,6 +256,7 @@ class Supplier {
   final String companyName;
   final String? contactName;
   final String? phoneNumber;
+  final String? email;
   final String? address;
 
   Supplier({
@@ -232,6 +264,7 @@ class Supplier {
     required this.companyName,
     this.contactName,
     this.phoneNumber,
+    this.email,
     this.address,
   });
 
@@ -241,6 +274,7 @@ class Supplier {
       companyName: map['company_name'] as String,
       contactName: map['contact_name'] as String?,
       phoneNumber: map['phone_number'] as String?,
+      email: map['email'] as String?,
       address: map['address'] as String?,
     );
   }
@@ -251,9 +285,13 @@ class Supplier {
       'company_name': companyName,
       'contact_name': contactName,
       'phone_number': phoneNumber,
+      'email': email,
       'address': address,
     };
   }
+
+  // Getter for compatibility with existing code
+  int get id => supplierId;
 
   @override
   bool operator ==(Object other) =>
@@ -269,5 +307,59 @@ class Supplier {
   @override
   String toString() {
     return 'Supplier{supplierId: $supplierId, companyName: $companyName}';
+  }
+}
+
+class UnitType {
+  final int unitId;
+  final String unitCode;
+  final String unitName;
+  final bool isWeighted;
+  final DateTime createdAt;
+
+  UnitType({
+    required this.unitId,
+    required this.unitCode,
+    required this.unitName,
+    this.isWeighted = false,
+    required this.createdAt,
+  });
+
+  factory UnitType.fromMap(Map<String, dynamic> map) {
+    return UnitType(
+      unitId: map['unit_id'] as int,
+      unitCode: map['unit_code'] as String,
+      unitName: map['unit_name'] as String,
+      isWeighted: map['is_weighted'] as bool? ?? false,
+      createdAt: map['created_at'] is DateTime
+          ? map['created_at'] as DateTime
+          : DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'unit_id': unitId,
+      'unit_code': unitCode,
+      'unit_name': unitName,
+      'is_weighted': isWeighted,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UnitType &&
+          runtimeType == other.runtimeType &&
+          unitId == other.unitId &&
+          unitCode == other.unitCode;
+
+  @override
+  int get hashCode => unitId.hashCode ^ unitCode.hashCode;
+
+  @override
+  String toString() {
+    return 'UnitType{unitId: $unitId, unitCode: $unitCode, unitName: $unitName}';
   }
 }
