@@ -3,7 +3,7 @@
 -- 1. Roles (Admin, Cashier, Manager)
 CREATE TABLE roles (
     role_id SERIAL PRIMARY KEY,
-    role_name TEXT NOT NULL UNIQUE,
+    role_name varchar(15) NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -12,9 +12,9 @@ CREATE TABLE roles (
 -- 2. Users (Staff login)
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
+    username varchar(50) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL, -- Store BCrypt/Argon2 hash, not plain text
-    full_name TEXT,
+    full_name varchar(50),
     role_id INT REFERENCES roles(role_id),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -24,7 +24,7 @@ CREATE TABLE users (
 -- 3. Categories (Beverages, Snacks, Home)
 CREATE TABLE categories (
     category_id SERIAL PRIMARY KEY,
-    category_name TEXT NOT NULL,
+    category_name varchar(100) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -33,9 +33,10 @@ CREATE TABLE categories (
 -- 4. Suppliers (Who you buy from)
 CREATE TABLE suppliers (
     supplier_id SERIAL PRIMARY KEY,
-    company_name TEXT NOT NULL,
-    contact_name TEXT,
-    phone_number TEXT,
+    company_name varchar(50) NOT NULL,
+    contact_name varchar(50),
+    phone_number varchar(15),
+    email varchar(254),
     address TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -45,8 +46,8 @@ CREATE TABLE suppliers (
 -- 5. Unit Types (Standardized units of measurement) - MOVED BEFORE PRODUCTS
 CREATE TABLE unit_types (
     unit_id SERIAL PRIMARY KEY,
-    unit_code TEXT NOT NULL UNIQUE, -- 'PCS', 'KG', 'L', etc.
-    unit_name TEXT NOT NULL, -- 'Pieces', 'Kilograms', 'Liters'
+    unit_code varchar(50) NOT NULL UNIQUE, -- 'PCS', 'KG', 'L', etc.
+    unit_name varchar(50) NOT NULL, -- 'Pieces', 'Kilograms', 'Liters'
     is_weighted BOOLEAN DEFAULT FALSE, -- For barcode scales (weight-based items)
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -61,9 +62,9 @@ CREATE TABLE products (
     unit_type_id INT REFERENCES unit_types(unit_id), -- Default unit for this product
 
     -- BARCODE: The most critical field for your scanner
-    barcode TEXT UNIQUE NOT NULL,
+    barcode varchar(50) UNIQUE NOT NULL,
 
-    product_name TEXT NOT NULL,
+    product_name varchar(50) NOT NULL,
     description TEXT,
 
     -- MONEY AS INT: Stored in cents/smallest unit
@@ -82,8 +83,8 @@ CREATE TABLE products (
 -- 7. Customers (Optional for Walk-in, Required for Loyalty)
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
-    phone_number TEXT UNIQUE,
-    full_name TEXT,
+    phone_number varchar(15) UNIQUE,
+    full_name varchar(50),
     address TEXT,
     loyalty_points INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
@@ -94,17 +95,17 @@ CREATE TABLE customers (
 -- 8. Sales (Single transaction record with simplified structure)
 CREATE TABLE sales (
     sale_id SERIAL PRIMARY KEY,
-    invoice_no TEXT UNIQUE NOT NULL, -- e.g., 'INV-20231025-001'
+    invoice_no varchar(50) UNIQUE NOT NULL, -- e.g., 'INV-20231025-001'
     user_id INT REFERENCES users(user_id), -- Cashier
     customer_id INT REFERENCES customers(customer_id), -- Nullable for walk-ins
 
     -- PRODUCT REFERENCE
     product_id INT REFERENCES products(product_id),
     unit_type_id INT REFERENCES unit_types(unit_id),
-    barcode TEXT NOT NULL, -- Denormalized for performance and receipts
+    barcode varchar(50) NOT NULL, -- Denormalized for performance and receipts
 
     -- TRANSACTION DETAILS
-    product_name TEXT NOT NULL, -- Snapshot for receipts/history
+    product_name varchar(50) NOT NULL, -- Snapshot for receipts/history
     quantity INT NOT NULL DEFAULT 1,
 
     -- SNAPSHOT PRICES: Store price at moment of sale (in case product price changes later)
@@ -145,7 +146,7 @@ CREATE TABLE purchases (
     supplier_id INT REFERENCES suppliers(supplier_id),
     user_id INT REFERENCES users(user_id),
 
-    supplier_invoice_no TEXT,
+    supplier_invoice_no varchar(50),
     total_amount INT DEFAULT 0,
     status TEXT DEFAULT 'RECEIVED', -- 'PENDING', 'RECEIVED'
 

@@ -21,14 +21,20 @@ class SupplierCubit extends Cubit<SupplierState> {
     ]);
   }
 
-  Future<void> loadSuppliers() async {
+  Future<void> loadSuppliers({int page = 1, int limit = 20}) async {
     try {
       emit(state.copyWith(isLoading: true, clearError: true));
 
-      final suppliers = await _supplierRepository.getAllSuppliers();
+      final suppliers = await _supplierRepository.getAllSuppliers(page: page, limit: limit);
+      final totalCount = await _supplierRepository.getSuppliersCount();
+      final totalPages = (totalCount / limit).ceil();
 
       emit(state.copyWith(
         suppliers: suppliers,
+        currentPage: page,
+        totalPages: totalPages,
+        totalSuppliersCount: totalCount,
+        pageSize: limit,
         isLoading: false,
       ));
     } catch (e) {
@@ -327,5 +333,28 @@ class SupplierCubit extends Cubit<SupplierState> {
     } catch (e) {
       throw Exception('Failed to check if supplier can be deleted: $e');
     }
+  }
+
+  // Pagination methods
+  Future<void> goToPage(int page) async {
+    if (page >= 1 && page <= state.totalPages) {
+      await loadSuppliers(page: page, limit: state.pageSize);
+    }
+  }
+
+  Future<void> nextPage() async {
+    if (state.currentPage < state.totalPages) {
+      await goToPage(state.currentPage + 1);
+    }
+  }
+
+  Future<void> previousPage() async {
+    if (state.currentPage > 1) {
+      await goToPage(state.currentPage - 1);
+    }
+  }
+
+  Future<void> changePageSize(int newPageSize) async {
+    await loadSuppliers(page: 1, limit: newPageSize);
   }
 }

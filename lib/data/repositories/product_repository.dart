@@ -9,8 +9,11 @@ class ProductRepository {
     : _productDbService = ProductDatabaseService(dbService);
 
   // Get all products
-  Future<List<Product>> getAllProducts() async {
-    final productsData = await _productDbService.getAllProducts();
+  Future<List<Product>> getAllProducts(int page, int limit) async {
+    final productsData = await _productDbService.getAllProducts(
+      page: page,
+      limit: limit,
+    );
     return productsData.map((data) => Product.fromMap(data)).toList();
   }
 

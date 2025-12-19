@@ -118,7 +118,12 @@ class ProductCubit extends Cubit<ProductState> {
     }
 
     try {
-      final products = await _productRepository.getAllProducts();
+      print("state.currentPage = ${state.currentPage}");
+      print(" state.itemsPerPage = ${state.itemsPerPage}");
+      final products = await _productRepository.getAllProducts(
+        state.currentPage,
+        state.itemsPerPage,
+      );
       print("products = $products");
       final filteredProducts = _applyFilters(products);
 
@@ -129,11 +134,8 @@ class ProductCubit extends Cubit<ProductState> {
       final currentPage = page > totalPages ? (totalPages > 0 ? 1 : 0) : page;
 
       // Get products for current page
-      final startIndex = (currentPage - 1) * itemsPerPage;
-      final pageProducts = filteredProducts
-          .skip(startIndex)
-          .take(itemsPerPage)
-          .toList();
+      // final startIndex = (currentPage - 1) * itemsPerPage;
+      final pageProducts = filteredProducts;
 
       emit(
         state.copyWith(
@@ -191,7 +193,7 @@ class ProductCubit extends Cubit<ProductState> {
 
   // Set filter
   void setFilter(ProductFilter filter) {
-    emit(state.copyWith(filter: filter));
+    emit(state.copyWith(filter: filter, currentPage: 1));
     _applyCurrentFilters();
   }
 
@@ -273,8 +275,11 @@ class ProductCubit extends Cubit<ProductState> {
     final stockQuantity = int.tryParse(stockQuantityText);
     if (stockQuantityText.trim().isEmpty) {
       stockQuantityError = 'Stock quantity is required';
-    } else if (stockQuantity == null || stockQuantity < 0) {
-      stockQuantityError = 'Invalid stock quantity';
+    } else if (stockQuantity == null) {
+      stockQuantityError = 'Invalid stock quantity format';
+    } else if (stockQuantity < 0) {
+      stockQuantityError =
+          'Stock quantity cannot be negative (found: $stockQuantity)';
     }
 
     emit(
@@ -437,7 +442,7 @@ class ProductCubit extends Cubit<ProductState> {
 
   // Apply current filters to products
   void _applyCurrentFilters() {
-    if (state.products.isEmpty) return;
+    // if (state.products.isEmpty) return;
 
     // If we have a search query, we don't need to re-apply filters
     if (state.searchQuery.isEmpty) {
@@ -585,7 +590,10 @@ class ProductCubit extends Cubit<ProductState> {
           state.searchQuery,
         );
       } else {
-        allProducts = await _productRepository.getAllProducts();
+        allProducts = await _productRepository.getAllProducts(
+          state.currentPage,
+          state.itemsPerPage,
+        );
       }
 
       final filteredProducts = _applyFilters(allProducts);

@@ -8,11 +8,20 @@ class SupplierRepository {
   SupplierRepository(DatabaseService dbService) : _supplierDbService = SupplierDatabaseService(dbService);
 
   // CRUD Operations
-  Future<List<Supplier>> getAllSuppliers() async {
+  Future<List<Supplier>> getAllSuppliers({int page = 1, int limit = 20}) async {
     try {
-      return await _supplierDbService.getAllSuppliers();
+      return await _supplierDbService.getAllSuppliers(page: page, limit: limit);
     } catch (e) {
       throw Exception('Failed to fetch suppliers: $e');
+    }
+  }
+
+  // Get total count of suppliers for pagination
+  Future<int> getSuppliersCount() async {
+    try {
+      return await _supplierDbService.getSuppliersCount();
+    } catch (e) {
+      throw Exception('Failed to fetch suppliers count: $e');
     }
   }
 
@@ -143,7 +152,7 @@ class SupplierRepository {
   Future<List<Supplier>> searchSuppliers(String searchTerm) async {
     try {
       if (searchTerm.trim().isEmpty) {
-        return getAllSuppliers();
+        return getAllSuppliers(page: 1, limit: 20);
       }
 
       return await _supplierDbService.searchSuppliers(searchTerm.trim());
@@ -171,7 +180,7 @@ class SupplierRepository {
 
   Future<List<Supplier>> getUnusedSuppliers() async {
     try {
-      final allSuppliers = await getAllSuppliers();
+      final allSuppliers = await getAllSuppliers(page: 1, limit: 1000); // Get all for this operation
       final activeSuppliers = await getActiveSuppliers();
 
       // Return suppliers that are not associated with any products
@@ -354,7 +363,7 @@ class SupplierRepository {
           .map((stat) => stat['supplierId'] as int)
           .toList();
 
-      final allSuppliers = await getAllSuppliers();
+      final allSuppliers = await getAllSuppliers(page: 1, limit: 1000); // Get all for this operation
       return allSuppliers.where((supplier) => topSupplierIds.contains(supplier.id)).toList();
     } catch (e) {
       throw Exception('Failed to fetch top suppliers by value: $e');

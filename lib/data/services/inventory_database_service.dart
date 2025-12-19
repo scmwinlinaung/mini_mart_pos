@@ -23,12 +23,17 @@ class InventoryDatabaseService {
         p.sell_price,
         p.stock_quantity,
         p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
         p.is_active,
         p.created_at,
         p.updated_at
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.category_id
       LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
+      WHERE p.is_active = true
       ORDER BY p.product_name
     ''');
 
@@ -52,12 +57,16 @@ class InventoryDatabaseService {
         p.sell_price,
         p.stock_quantity,
         p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
         p.is_active,
         p.created_at,
         p.updated_at
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.category_id
       LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
       WHERE p.stock_quantity <= p.reorder_level AND p.is_active = true
       ORDER BY p.stock_quantity ASC
     ''');
@@ -82,12 +91,16 @@ class InventoryDatabaseService {
         p.sell_price,
         p.stock_quantity,
         p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
         p.is_active,
         p.created_at,
         p.updated_at
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.category_id
       LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
       WHERE p.stock_quantity <= 0 AND p.is_active = true
       ORDER BY p.product_name
     ''');
@@ -113,12 +126,16 @@ class InventoryDatabaseService {
         p.sell_price,
         p.stock_quantity,
         p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
         p.is_active,
         p.created_at,
         p.updated_at
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.category_id
       LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
       WHERE (p.product_name ILIKE @query OR p.barcode ILIKE @query) AND p.is_active = true
       ORDER BY p.product_name
       LIMIT 50
@@ -314,5 +331,231 @@ class InventoryDatabaseService {
     );
 
     return result.map((row) => row.toColumnMap()).toList();
+  }
+
+  // Paginated methods for product lists
+  Future<Map<String, dynamic>> getAllProductsWithStockPaginated({
+    int page = 1,
+    int limit = 20,
+    String sortBy = 'product_name',
+    String sortOrder = 'ASC',
+  }) async {
+    final conn = await _dbService.connection;
+    final offset = (page - 1) * limit;
+
+    // Validate sortBy and sortOrder to prevent SQL injection
+    final validSortColumns = [
+      'product_name', 'barcode', 'category_name', 'supplier_name',
+      'cost_price', 'sell_price', 'stock_quantity', 'created_at'
+    ];
+    final validSortOrders = ['ASC', 'DESC'];
+
+    final safeSortBy = validSortColumns.contains(sortBy) ? sortBy : 'product_name';
+    final safeSortOrder = validSortOrders.contains(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
+
+    // Get total count
+    final countResult = await conn.execute('''
+      SELECT COUNT(*) as total FROM products WHERE is_active = true
+    ''');
+    final total = countResult.first[0] as int;
+
+    // Get paginated data with safe ORDER BY clause
+    final dataResult = await conn.execute('''
+      SELECT
+        p.product_id,
+        p.barcode,
+        p.product_name,
+        p.description,
+        p.category_id,
+        c.category_name,
+        p.supplier_id,
+        s.company_name as supplier_name,
+        p.cost_price,
+        p.sell_price,
+        p.stock_quantity,
+        p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
+        p.is_active,
+        p.created_at,
+        p.updated_at
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
+      WHERE p.is_active = true
+      ORDER BY $safeSortBy $safeSortOrder
+      LIMIT \$1 OFFSET \$2
+    ''', parameters: [limit, offset]);
+
+    return {
+      'data': dataResult.map((row) => row.toColumnMap()).toList(),
+      'total': total,
+      'page': page,
+      'limit': limit,
+      'totalPages': (total + limit - 1) ~/ limit,
+    };
+  }
+
+  Future<Map<String, dynamic>> getLowStockProductsPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final conn = await _dbService.connection;
+    final offset = (page - 1) * limit;
+
+    // Get total count
+    final countResult = await conn.execute('''
+      SELECT COUNT(*) as total FROM products
+      WHERE stock_quantity <= reorder_level AND stock_quantity > 0 AND is_active = true
+    ''');
+    final total = countResult.first[0] as int;
+
+    // Get paginated data
+    final dataResult = await conn.execute('''
+      SELECT
+        p.product_id,
+        p.barcode,
+        p.product_name,
+        p.description,
+        p.category_id,
+        c.category_name,
+        p.supplier_id,
+        s.company_name as supplier_name,
+        p.cost_price,
+        p.sell_price,
+        p.stock_quantity,
+        p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
+        p.is_active,
+        p.created_at,
+        p.updated_at
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
+      WHERE p.stock_quantity <= p.reorder_level AND p.stock_quantity > 0 AND p.is_active = true
+      ORDER BY p.product_name
+      LIMIT \$1 OFFSET \$2
+    ''', parameters: [limit, offset]);
+
+    return {
+      'data': dataResult.map((row) => row.toColumnMap()).toList(),
+      'total': total,
+      'page': page,
+      'limit': limit,
+      'totalPages': (total + limit - 1) ~/ limit,
+    };
+  }
+
+  Future<Map<String, dynamic>> getOutOfStockProductsPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final conn = await _dbService.connection;
+    final offset = (page - 1) * limit;
+
+    // Get total count
+    final countResult = await conn.execute('''
+      SELECT COUNT(*) as total FROM products
+      WHERE stock_quantity <= 0 AND is_active = true
+    ''');
+    final total = countResult.first[0] as int;
+
+    // Get paginated data
+    final dataResult = await conn.execute('''
+      SELECT
+        p.product_id,
+        p.barcode,
+        p.product_name,
+        p.description,
+        p.category_id,
+        c.category_name,
+        p.supplier_id,
+        s.company_name as supplier_name,
+        p.cost_price,
+        p.sell_price,
+        p.stock_quantity,
+        p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
+        p.is_active,
+        p.created_at,
+        p.updated_at
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
+      WHERE p.stock_quantity <= 0 AND p.is_active = true
+      ORDER BY p.product_name
+      LIMIT \$1 OFFSET \$2
+    ''', parameters: [limit, offset]);
+
+    return {
+      'data': dataResult.map((row) => row.toColumnMap()).toList(),
+      'total': total,
+      'page': page,
+      'limit': limit,
+      'totalPages': (total + limit - 1) ~/ limit,
+    };
+  }
+
+  Future<Map<String, dynamic>> searchProductsPaginated({
+    required String query,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final conn = await _dbService.connection;
+    final offset = (page - 1) * limit;
+    final searchPattern = '%$query%';
+
+    // Get total count
+    final countResult = await conn.execute('''
+      SELECT COUNT(*) as total FROM products
+      WHERE (product_name ILIKE \$1 OR barcode ILIKE \$1) AND is_active = true
+    ''', parameters: [searchPattern]);
+    final total = countResult.first[0] as int;
+
+    // Get paginated data
+    final dataResult = await conn.execute('''
+      SELECT
+        p.product_id,
+        p.barcode,
+        p.product_name,
+        p.description,
+        p.category_id,
+        c.category_name,
+        p.supplier_id,
+        s.company_name as supplier_name,
+        p.cost_price,
+        p.sell_price,
+        p.stock_quantity,
+        p.reorder_level,
+        p.unit_type_id,
+        u.unit_code,
+        u.unit_name,
+        p.is_active,
+        p.created_at,
+        p.updated_at
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id
+      LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
+      WHERE (p.product_name ILIKE \$1 OR p.barcode ILIKE \$1) AND p.is_active = true
+      ORDER BY p.product_name
+      LIMIT \$2 OFFSET \$3
+    ''', parameters: [searchPattern, limit, offset]);
+
+    return {
+      'data': dataResult.map((row) => row.toColumnMap()).toList(),
+      'total': total,
+      'page': page,
+      'limit': limit,
+      'totalPages': (total + limit - 1) ~/ limit,
+    };
   }
 }

@@ -7,9 +7,14 @@ class ProductDatabaseService {
   ProductDatabaseService(this._dbService);
 
   // Get all products with categories, suppliers, and unit types
-  Future<List<Map<String, dynamic>>> getAllProducts() async {
+  Future<List<Map<String, dynamic>>> getAllProducts({
+    int page = 1,
+    int limit = 20,
+  }) async {
     final conn = await _dbService.connection;
-    final result = await conn.execute('''
+    final offset = (page - 1) * limit;
+    final result = await conn.execute(
+      '''
       SELECT
         p.*,
         c.category_name,
@@ -24,7 +29,10 @@ class ProductDatabaseService {
       LEFT JOIN unit_types u ON p.unit_type_id = u.unit_id
       WHERE p.is_active = true
       ORDER BY p.product_name
-    ''');
+      LIMIT \$1 OFFSET \$2
+    ''',
+      parameters: [limit, offset],
+    );
 
     return result.map((row) => row.toColumnMap()).toList();
   }

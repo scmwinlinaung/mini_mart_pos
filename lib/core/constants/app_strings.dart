@@ -322,4 +322,19 @@ class AppStrings {
   static const String inventoryValue = 'inventoryValue';
   static const String deleteSupplier = 'deleteSupplier';
   static const String deleteSupplierConfirmation = 'deleteSupplierConfirmation';
+
+  // Additional strings needed
+  static const String all = 'all';
+  static const String inStock = 'inStock';
+  static const String lowStock = 'lowStock';
+  static const String outOfStock = 'outOfStock';
+  static const String newItem = 'newItem';
+  static const String addFirstItem = 'addFirstItem';
+  static const String itemsPerPage = 'itemsPerPage';
+  static const String showing = 'showing';
+  static const String of = 'of';
+  static const String page = 'page';
+  static const String selectProduct = 'selectProduct';
+  static const String addFirstProduct = 'addFirstProduct';
+  static const String noProductsFound = 'noProductsFound';
 }

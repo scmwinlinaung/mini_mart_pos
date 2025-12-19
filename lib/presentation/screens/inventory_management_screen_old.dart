@@ -19,34 +19,14 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
   late InventoryRepository _inventoryRepository;
   late AuthRepository _authRepository;
 
-  // Pagination state for each tab
-  int _currentPageAll = 1;
-  int _currentPageLowStock = 1;
-  int _currentPageOutOfStock = 1;
-  int _currentPageSearch = 1;
-
-  static const int _pageSize = 20;
-
   List<Product> _allProducts = [];
   List<Product> _lowStockProducts = [];
   List<Product> _outOfStockProducts = [];
-  List<Product> _searchResults = [];
   Map<String, int> _summary = {};
 
   bool _isLoading = true;
   bool _isSearching = false;
-  bool _isLoadingMore = false;
   final TextEditingController _searchController = TextEditingController();
-
-  // Pagination info
-  int _totalAll = 0;
-  int _totalLowStock = 0;
-  int _totalOutOfStock = 0;
-  int _totalSearch = 0;
-  int _totalPagesAll = 0;
-  int _totalPagesLowStock = 0;
-  int _totalPagesOutOfStock = 0;
-  int _totalPagesSearch = 0;
 
   @override
   void initState() {
@@ -71,14 +51,17 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
 
     try {
       final results = await Future.wait([
+        _inventoryRepository.getAllProducts(),
+        _inventoryRepository.getLowStockProducts(),
+        _inventoryRepository.getOutOfStockProducts(),
         _inventoryRepository.getInventorySummary(),
-        _loadAllProducts(page: 1),
-        _loadLowStockProducts(page: 1),
-        _loadOutOfStockProducts(page: 1),
       ]);
 
       setState(() {
-        _summary = results[0] as Map<String, int>;
+        _allProducts = results[0] as List<Product>;
+        _lowStockProducts = results[1] as List<Product>;
+        _outOfStockProducts = results[2] as List<Product>;
+        _summary = results[3] as Map<String, int>;
         _isLoading = false;
       });
     } catch (e) {
@@ -93,144 +76,23 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     }
   }
 
-  Future<void> _loadAllProducts({int page = 1, bool isLoadMore = false}) async {
-    if (isLoadMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-    }
-
-    try {
-      final result = await _inventoryRepository.getAllProductsPaginated(
-        page: page,
-        limit: _pageSize,
-      );
-
-      setState(() {
-        if (isLoadMore) {
-          _allProducts.addAll(result.products);
-        } else {
-          _allProducts = result.products;
-        }
-        _totalAll = result.total;
-        _totalPagesAll = result.totalPages;
-        _currentPageAll = page;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading products: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _loadLowStockProducts({int page = 1, bool isLoadMore = false}) async {
-    if (isLoadMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-    }
-
-    try {
-      final result = await _inventoryRepository.getLowStockProductsPaginated(
-        page: page,
-        limit: _pageSize,
-      );
-
-      setState(() {
-        if (isLoadMore) {
-          _lowStockProducts.addAll(result.products);
-        } else {
-          _lowStockProducts = result.products;
-        }
-        _totalLowStock = result.total;
-        _totalPagesLowStock = result.totalPages;
-        _currentPageLowStock = page;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading low stock products: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _loadOutOfStockProducts({int page = 1, bool isLoadMore = false}) async {
-    if (isLoadMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-    }
-
-    try {
-      final result = await _inventoryRepository.getOutOfStockProductsPaginated(
-        page: page,
-        limit: _pageSize,
-      );
-
-      setState(() {
-        if (isLoadMore) {
-          _outOfStockProducts.addAll(result.products);
-        } else {
-          _outOfStockProducts = result.products;
-        }
-        _totalOutOfStock = result.total;
-        _totalPagesOutOfStock = result.totalPages;
-        _currentPageOutOfStock = page;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading out of stock products: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _searchProducts(String query, {int page = 1, bool isLoadMore = false}) async {
+  Future<void> _searchProducts(String query) async {
     if (query.isEmpty) {
       setState(() {
         _isSearching = false;
-        _searchResults.clear();
       });
       return;
     }
 
     setState(() {
       _isSearching = true;
-      if (page == 1) _isLoading = true;
+      _isLoading = true;
     });
 
     try {
-      final result = await _inventoryRepository.searchProductsPaginated(
-        query: query,
-        page: page,
-        limit: _pageSize,
-      );
-
+      final results = await _inventoryRepository.searchProducts(query);
       setState(() {
-        if (isLoadMore) {
-          _searchResults.addAll(result.products);
-        } else {
-          _searchResults = result.products;
-        }
-        _totalSearch = result.total;
-        _totalPagesSearch = result.totalPages;
-        _currentPageSearch = page;
+        _allProducts = results;
         _isLoading = false;
       });
     } catch (e) {
@@ -238,9 +100,9 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching products: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error searching products: $e')));
       }
     }
   }
@@ -313,7 +175,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Stock updated successfully')),
                   );
-                  _refreshCurrentTab();
+                  _loadInventoryData();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Failed to update stock')),
@@ -392,23 +254,6 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
         ],
       ),
     );
-  }
-
-  void _refreshCurrentTab() {
-    switch (_tabController.index) {
-      case 0: // Summary
-        _loadInventoryData();
-        break;
-      case 1: // All Products
-        _loadAllProducts(page: 1);
-        break;
-      case 2: // Low Stock
-        _loadLowStockProducts(page: 1);
-        break;
-      case 3: // Out of Stock
-        _loadOutOfStockProducts(page: 1);
-        break;
-    }
   }
 
   Widget _buildSummaryCards() {
@@ -506,19 +351,12 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     );
   }
 
-  Widget _buildPaginatedProductList({
-    required List<Product> products,
-    required int totalCount,
-    required int currentPage,
-    required int totalPages,
-    required VoidCallback onLoadMore,
-    required bool isLoadingMore,
-  }) {
-    if (_isLoading && currentPage == 1) {
+  Widget _buildProductList(List<Product> products) {
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (products.isEmpty && !_isLoading) {
+    if (products.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -531,103 +369,55 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
       );
     }
 
-    return Column(
-      children: [
-        // Product count and pagination info
-        if (products.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey[100],
-            child: Row(
-              children: [
-                Text(
-                  'Showing ${products.length} of $totalCount products',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+    return ListView.builder(
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: product.isOutOfStock
+                  ? Colors.red
+                  : product.isLowStock
+                  ? Colors.orange
+                  : Colors.green,
+              child: Text(
+                '${product.stockQuantity}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
-                if (totalPages > 1) ...[
-                  const Spacer(),
-                  Text(
-                    'Page $currentPage of $totalPages',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+              ),
+            ),
+            title: Text(product.productName),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Barcode: ${product.barcode}'),
+                if (product.categoryName != null)
+                  Text('Category: ${product.categoryName}'),
+                Text('Price: ${product.sellPrice}'),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.history),
+                  onPressed: () => _showStockHistory(product),
+                  tooltip: 'Stock History',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _showStockAdjustmentDialog(product),
+                  tooltip: 'Adjust Stock',
+                ),
               ],
             ),
           ),
-
-        // Product list
-        Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification scrollInfo) {
-              if (scrollInfo is ScrollEndNotification &&
-                  scrollInfo.metrics.extentAfter == 0 &&
-                  currentPage < totalPages &&
-                  !isLoadingMore) {
-                onLoadMore();
-                return true;
-              }
-              return false;
-            },
-            child: ListView.builder(
-              itemCount: products.length + (isLoadingMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == products.length && isLoadingMore) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                final product = products[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: product.isOutOfStock
-                          ? Colors.red
-                          : product.isLowStock
-                          ? Colors.orange
-                          : Colors.green,
-                      child: Text(
-                        '${product.stockQuantity}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    title: Text(product.productName),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Barcode: ${product.barcode}'),
-                        if (product.categoryName != null)
-                          Text('Category: ${product.categoryName}'),
-                        Text('Price: ${product.sellPrice}'),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.history),
-                          onPressed: () => _showStockHistory(product),
-                          tooltip: 'Stock History',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _showStockAdjustmentDialog(product),
-                          tooltip: 'Adjust Stock',
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -648,7 +438,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshCurrentTab,
+            onPressed: _loadInventoryData,
             tooltip: 'Refresh',
           ),
         ],
@@ -669,8 +459,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                       _searchController.clear();
                       setState(() {
                         _isSearching = false;
-                        _searchResults.clear();
                       });
+                      _loadInventoryData();
                     },
                   ),
                   border: const OutlineInputBorder(),
@@ -679,8 +469,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                   if (value.isEmpty) {
                     setState(() {
                       _isSearching = false;
-                      _searchResults.clear();
                     });
+                    _loadInventoryData();
                   } else {
                     _searchProducts(value);
                   }
@@ -692,9 +482,9 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
               controller: _tabController,
               children: [
                 _buildSummaryTab(),
-                _buildAllProductsTab(),
-                _buildLowStockTab(),
-                _buildOutOfStockTab(),
+                _buildProductsTab(_allProducts, isSearchable: true),
+                _buildProductsTab(_lowStockProducts),
+                _buildProductsTab(_outOfStockProducts),
               ],
             ),
           ),
@@ -772,8 +562,11 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     );
   }
 
-  Widget _buildAllProductsTab() {
-    if (!_isSearching) {
+  Widget _buildProductsTab(
+    List<Product> products, {
+    bool isSearchable = false,
+  }) {
+    if (isSearchable && !_isSearching) {
       return Column(
         children: [
           Padding(
@@ -791,62 +584,10 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
               },
             ),
           ),
-          Expanded(
-            child: _buildPaginatedProductList(
-              products: _allProducts,
-              totalCount: _totalAll,
-              currentPage: _currentPageAll,
-              totalPages: _totalPagesAll,
-              onLoadMore: () => _loadAllProducts(
-                page: _currentPageAll + 1,
-                isLoadMore: true,
-              ),
-              isLoadingMore: _isLoadingMore,
-            ),
-          ),
+          Expanded(child: _buildProductList(products)),
         ],
       );
     }
-
-    return _buildPaginatedProductList(
-      products: _searchResults,
-      totalCount: _totalSearch,
-      currentPage: _currentPageSearch,
-      totalPages: _totalPagesSearch,
-      onLoadMore: () => _searchProducts(
-        _searchController.text,
-        page: _currentPageSearch + 1,
-        isLoadMore: true,
-      ),
-      isLoadingMore: _isLoadingMore,
-    );
-  }
-
-  Widget _buildLowStockTab() {
-    return _buildPaginatedProductList(
-      products: _lowStockProducts,
-      totalCount: _totalLowStock,
-      currentPage: _currentPageLowStock,
-      totalPages: _totalPagesLowStock,
-      onLoadMore: () => _loadLowStockProducts(
-        page: _currentPageLowStock + 1,
-        isLoadMore: true,
-      ),
-      isLoadingMore: _isLoadingMore,
-    );
-  }
-
-  Widget _buildOutOfStockTab() {
-    return _buildPaginatedProductList(
-      products: _outOfStockProducts,
-      totalCount: _totalOutOfStock,
-      currentPage: _currentPageOutOfStock,
-      totalPages: _totalPagesOutOfStock,
-      onLoadMore: () => _loadOutOfStockProducts(
-        page: _currentPageOutOfStock + 1,
-        isLoadMore: true,
-      ),
-      isLoadingMore: _isLoadingMore,
-    );
+    return _buildProductList(products);
   }
 }

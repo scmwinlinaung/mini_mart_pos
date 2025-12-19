@@ -4,9 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/logic/product/product_cubit.dart';
 import '../../data/models/product.dart';
 import '../../core/service_locator.dart';
+import '../../core/constants/app_strings.dart';
+import '../../core/widgets/paginated_table.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/desktop_scaffold.dart';
 import '../widgets/barcode_scanner_widget.dart';
+import '../widgets/language_selector.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key});
@@ -176,8 +179,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     return BlocProvider(
       create: (context) => sl<ProductCubit>()..loadProducts(),
       child: DesktopScaffold(
-        appBar: const DesktopAppBar(
-          title: 'Product Management',
+        appBar: DesktopAppBar(
+          title: context.getString(AppStrings.productManagement),
           showBackButton: true,
         ),
         body: Row(
@@ -200,7 +203,6 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
             // Product Form (Right Side)
             const SizedBox(width: 16),
             Expanded(
-              flex: 1,
               child: Card(
                 margin: const EdgeInsets.only(right: 16, top: 16, bottom: 16),
                 child: _buildProductForm(context),
@@ -220,7 +222,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           Expanded(
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search by barcode or product name...',
+                hintText: context.getString(AppStrings.searchProducts),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -241,7 +243,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
               context.read<ProductCubit>().refreshProducts();
             },
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: context.getString(AppStrings.refresh),
           ),
         ],
       ),
@@ -257,14 +259,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
             children: [
               _buildFilterChip(
                 context,
-                'All',
+                context.getString(AppStrings.all),
                 state.filter == ProductFilter.all,
                 () => context.read<ProductCubit>().setFilter(ProductFilter.all),
               ),
               const SizedBox(width: 8),
               _buildFilterChip(
                 context,
-                'In Stock',
+                context.getString(AppStrings.inStock),
                 state.filter == ProductFilter.inStock,
                 () => context.read<ProductCubit>().setFilter(
                   ProductFilter.inStock,
@@ -273,7 +275,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
               const SizedBox(width: 8),
               _buildFilterChip(
                 context,
-                'Low Stock',
+                context.getString(AppStrings.lowStock),
                 state.filter == ProductFilter.lowStock,
                 () => context.read<ProductCubit>().setFilter(
                   ProductFilter.lowStock,
@@ -282,7 +284,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
               const SizedBox(width: 8),
               _buildFilterChip(
                 context,
-                'Out of Stock',
+                context.getString(AppStrings.outOfStock),
                 state.filter == ProductFilter.outOfStock,
                 () => context.read<ProductCubit>().setFilter(
                   ProductFilter.outOfStock,
@@ -316,98 +318,91 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       builder: (context, state) {
         return state.when(
           initial: () =>
-              const Center(child: Text('Select a product to view details')),
+              Center(child: Text(context.getString(AppStrings.selectProduct))),
           loading: () => const Center(child: CircularProgressIndicator()),
           loaded: (products, selectedProduct) {
-            return Column(
-              children: [
-                // Product count and pagination info
-                if (state.totalItems > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Showing ${state.totalItems > 0 ? ((state.currentPage - 1) * state.itemsPerPage) + 1 : 0}-${math.min(state.currentPage * state.itemsPerPage, state.totalItems)} of ${state.totalItems} products',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                        // Items per page selector
-                        Row(
-                          children: [
-                            Text(
-                              'Items per page: ',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                            DropdownButton<int>(
-                              value: state.itemsPerPage,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  context
-                                      .read<ProductCubit>()
-                                      .changeItemsPerPage(value);
-                                }
-                              },
-                              items: [10, 20, 50, 100].map((count) {
-                                return DropdownMenuItem<int>(
-                                  value: count,
-                                  child: Text(count.toString()),
-                                );
-                              }).toList(),
-                              underline: Container(),
-                              isDense: true,
-                            ),
-                          ],
-                        ),
-                      ],
+            return PaginatedTable<Product>(
+              data: products,
+              columns: [
+                TableColumnConfig<Product>(
+                  headerKey: AppStrings.barcode,
+                  cellBuilder: (product, index) => Text(
+                    product.barcode,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  minWidth: 30,
+                ),
+                TableColumnConfig<Product>(
+                  headerKey: AppStrings.productName,
+                  cellBuilder: (product, index) => Text(product.productName),
+                  // fit: FlexFit.loose,
+                  minWidth: 40,
+                ),
+                TableColumnConfig<Product>(
+                  headerKey: AppStrings.stockQuantity,
+                  cellBuilder: (product, index) => Text(
+                    '${product.stockQuantity}',
+                    style: TextStyle(
+                      color: product.isOutOfStock
+                          ? Colors.red
+                          : product.isLowStock
+                          ? Colors.orange
+                          : Colors.green,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                // Product table
-                Expanded(
-                  child: products.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inventory_2_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No products found',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                onPressed: () => context
-                                    .read<ProductCubit>()
-                                    .startAddProduct(),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Add First Product'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _buildProductTable(context, products, selectedProduct),
+                  minWidth: 40,
                 ),
-                // Pagination controls
-                if (state.totalPages > 1)
-                  _buildPaginationControls(context, state),
+                TableColumnConfig<Product>(
+                  headerKey: AppStrings.price,
+                  cellBuilder: (product, index) =>
+                      Text(product.sellPrice.toString()),
+                  minWidth: 40,
+                ),
+                TableColumnConfig<Product>(
+                  headerKey: AppStrings.status,
+                  cellBuilder: (product, index) => _buildStatusChip(product),
+                  minWidth: 40,
+                ),
               ],
+              actions: [
+                ActionConfig<Product>(
+                  icon: Icons.edit,
+                  tooltipKey: AppStrings.edit,
+                  onPressed: (product) {
+                    context.read<ProductCubit>().startEditProduct(product);
+                  },
+                ),
+                ActionConfig<Product>(
+                  icon: Icons.delete,
+                  tooltipKey: AppStrings.delete,
+                  color: Colors.red,
+                  onPressed: (product) {
+                    _showDeleteConfirmDialog(context, product);
+                  },
+                ),
+              ],
+              pagination: PaginationConfig(
+                currentPage: state.currentPage,
+                totalPages: state.totalPages,
+                totalItems: state.totalItems,
+                itemsPerPage: state.itemsPerPage,
+                onPageChanged: (page) {
+                  context.read<ProductCubit>().goToPage(page);
+                },
+                onItemsPerPageChanged: (itemsPerPage) {
+                  context.read<ProductCubit>().changeItemsPerPage(itemsPerPage);
+                },
+              ),
+              emptyMessageKey: AppStrings.noProductsFound,
+              emptyIcon: const Icon(
+                Icons.inventory_2_outlined,
+                size: 64,
+                color: Colors.grey,
+              ),
+              onRowTap: (product) {
+                context.read<ProductCubit>().selectProduct(product);
+              },
             );
           },
           error: (message) => Center(
@@ -417,7 +412,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                 Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
                 const SizedBox(height: 16),
                 Text(
-                  'Error loading products',
+                  context.getString(AppStrings.error),
                   style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
@@ -431,7 +426,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                   onPressed: () =>
                       context.read<ProductCubit>().refreshProducts(),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(context.getString(AppStrings.retry)),
                 ),
               ],
             ),
@@ -441,192 +436,32 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     );
   }
 
-  Widget _buildProductTable(
-    BuildContext context,
-    List<Product> products,
-    Product? selectedProduct,
-  ) {
-    return Column(
-      children: [
-        // Table Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-          ),
-          child: const Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Barcode',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Text(
-                  'Product Name',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Stock',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Price',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Text(
-                  'Status',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              SizedBox(
-                width: 100,
-                child: Text(
-                  'Actions',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Table Body
-        Expanded(
-          child: ListView.builder(
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              final isSelected =
-                  selectedProduct?.productId == product.productId;
-
-              return InkWell(
-                onTap: () {
-                  context.read<ProductCubit>().selectProduct(product);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).primaryColor.withOpacity(0.1)
-                        : null,
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[200]!),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          product.barcode,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      Expanded(flex: 3, child: Text(product.productName)),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          '${product.stockQuantity}',
-                          style: TextStyle(
-                            color: product.isOutOfStock
-                                ? Colors.red
-                                : product.isLowStock
-                                ? Colors.orange
-                                : Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(product.sellPrice.toString()),
-                      ),
-                      Expanded(flex: 1, child: _buildStatusChip(product)),
-                      SizedBox(
-                        width: 100,
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                context.read<ProductCubit>().startEditProduct(
-                                  product,
-                                );
-                              },
-                              icon: const Icon(Icons.edit, size: 16),
-                              tooltip: 'Edit',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                _showDeleteConfirmDialog(context, product);
-                              },
-                              icon: const Icon(
-                                Icons.delete,
-                                size: 16,
-                                color: Colors.red,
-                              ),
-                              tooltip: 'Delete',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildStatusChip(Product product) {
     Color color;
-    String text;
+    String textKey;
 
     if (product.isOutOfStock) {
       color = Colors.red;
-      text = 'Out of Stock';
+      textKey = AppStrings.outOfStock;
     } else if (product.isLowStock) {
       color = Colors.orange;
-      text = 'Low Stock';
+      textKey = AppStrings.lowStock;
     } else {
       color = Colors.green;
-      text = 'In Stock';
+      textKey = AppStrings.inStock;
     }
 
-    return Chip(
-      label: Text(
-        text,
-        style: const TextStyle(fontSize: 11, color: Colors.white),
-      ),
-      backgroundColor: color,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    return Builder(
+      builder: (context) {
+        return Chip(
+          label: Text(
+            context.getString(textKey),
+            style: const TextStyle(fontSize: 11, color: Colors.white),
+          ),
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        );
+      },
     );
   }
 

@@ -744,8 +744,11 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
                                 return 'Please enter quantity';
                               }
                               final quantity = int.tryParse(value);
-                              if (quantity == null || quantity <= 0) {
-                                return 'Please enter a valid quantity';
+                              if (quantity == null) {
+                                return 'Invalid quantity format';
+                              }
+                              if (quantity <= 0) {
+                                return 'Quantity must be greater than 0 (found: $quantity)';
                               }
                               return null;
                             },
@@ -767,8 +770,11 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
                                 return 'Please enter unit price';
                               }
                               final price = double.tryParse(value);
-                              if (price == null || price <= 0) {
-                                return 'Please enter a valid price';
+                              if (price == null) {
+                                return 'Invalid price format';
+                              }
+                              if (price <= 0) {
+                                return 'Price must be greater than 0 (found: $price)';
                               }
                               return null;
                             },

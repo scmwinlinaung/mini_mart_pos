@@ -8,6 +8,12 @@ class SupplierState {
   final bool isEditing;
   final List<Map<String, dynamic>> supplierStatistics;
 
+  // Pagination
+  final int currentPage;
+  final int totalPages;
+  final int totalSuppliersCount;
+  final int pageSize;
+
   // Form fields
   final String companyName;
   final String contactName;
@@ -36,6 +42,10 @@ class SupplierState {
     this.error,
     this.isEditing = false,
     this.supplierStatistics = const [],
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.totalSuppliersCount = 0,
+    this.pageSize = 20,
     this.companyName = '',
     this.contactName = '',
     this.phoneNumber = '',
@@ -59,6 +69,10 @@ class SupplierState {
     bool clearError = false,
     bool? isEditing,
     List<Map<String, dynamic>>? supplierStatistics,
+    int? currentPage,
+    int? totalPages,
+    int? totalSuppliersCount,
+    int? pageSize,
     String? companyName,
     String? contactName,
     String? phoneNumber,
@@ -86,6 +100,10 @@ class SupplierState {
       error: clearError ? null : (error ?? this.error),
       isEditing: isEditing ?? this.isEditing,
       supplierStatistics: supplierStatistics ?? this.supplierStatistics,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      totalSuppliersCount: totalSuppliersCount ?? this.totalSuppliersCount,
+      pageSize: pageSize ?? this.pageSize,
       companyName: companyName ?? this.companyName,
       contactName: contactName ?? this.contactName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
@@ -124,23 +142,25 @@ class SupplierState {
     }).toList();
   }
 
+  // Keep the old getter for backward compatibility in statistics
+  @Deprecated('Use totalSuppliersCount for pagination, suppliers.length for current page')
   int get totalSuppliers {
     return suppliers.length;
   }
 
   int get totalProducts {
-    return supplierStatistics.fold(0, (sum, stat) => sum + (stat['productCount'] as int));
+    return supplierStatistics.fold(0, (sum, stat) => sum + (stat['productCount'] as int? ?? 0));
   }
 
   int get suppliersWithProducts {
-    return supplierStatistics.where((stat) => (stat['productCount'] as int) > 0).length;
+    return supplierStatistics.where((stat) => (stat['productCount'] as int? ?? 0) > 0).length;
   }
 
   double get totalInventoryValue {
-    return supplierStatistics.fold(0.0, (sum, stat) => sum + (stat['totalValue'] as double));
+    return supplierStatistics.fold(0.0, (sum, stat) => sum + (stat['totalValue'] as double? ?? 0.0));
   }
 
   int get totalLowStockItems {
-    return supplierStatistics.fold(0, (sum, stat) => sum + (stat['lowStockCount'] as int));
+    return supplierStatistics.fold(0, (sum, stat) => sum + (stat['lowStockCount'] as int? ?? 0));
   }
 }

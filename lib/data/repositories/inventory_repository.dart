@@ -3,6 +3,22 @@ import '../../core/services/database_service.dart';
 import '../services/inventory_database_service.dart';
 import '../models/product.dart';
 
+class PaginatedProductResult {
+  final List<Product> products;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+
+  const PaginatedProductResult({
+    required this.products,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+  });
+}
+
 class InventoryRepository {
   final DatabaseService _databaseService = DatabaseService();
   late final InventoryDatabaseService _inventoryService;
@@ -12,10 +28,16 @@ class InventoryRepository {
   }
 
   // Get all products with current stock levels
-  Future<List<Product>> getAllProducts() async {
+  Future<List<Product>> getAllProducts({int page = 1, int limit = 20}) async {
     try {
-      final results = await _inventoryService.getAllProductsWithStock();
-      return results.map((row) => Product.fromMap(row)).toList();
+      final result = await _inventoryService.getAllProductsWithStockPaginated(
+        page: page,
+        limit: limit,
+      );
+
+      return (result['data'] as List)
+          .map((row) => Product.fromMap(row as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       print('Error getting all products: $e');
       return [];
@@ -115,6 +137,145 @@ class InventoryRepository {
         'low_stock': 0,
         'active_products': 0,
       };
+    }
+  }
+
+  // Paginated methods
+  Future<PaginatedProductResult> getAllProductsPaginated({
+    int page = 1,
+    int limit = 20,
+    String sortBy = 'product_name',
+    String sortOrder = 'ASC',
+  }) async {
+    try {
+      final result = await _inventoryService.getAllProductsWithStockPaginated(
+        page: page,
+        limit: limit,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      );
+
+      final products = (result['data'] as List)
+          .map((row) => Product.fromMap(row as Map<String, dynamic>))
+          .toList();
+
+      return PaginatedProductResult(
+        products: products,
+        total: result['total'] as int,
+        page: result['page'] as int,
+        limit: result['limit'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+    } catch (e) {
+      print('Error getting paginated products: $e');
+      return PaginatedProductResult(
+        products: [],
+        total: 0,
+        page: page,
+        limit: limit,
+        totalPages: 0,
+      );
+    }
+  }
+
+  Future<PaginatedProductResult> getLowStockProductsPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final result = await _inventoryService.getLowStockProductsPaginated(
+        page: page,
+        limit: limit,
+      );
+
+      final products = (result['data'] as List)
+          .map((row) => Product.fromMap(row as Map<String, dynamic>))
+          .toList();
+
+      return PaginatedProductResult(
+        products: products,
+        total: result['total'] as int,
+        page: result['page'] as int,
+        limit: result['limit'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+    } catch (e) {
+      print('Error getting paginated low stock products: $e');
+      return PaginatedProductResult(
+        products: [],
+        total: 0,
+        page: page,
+        limit: limit,
+        totalPages: 0,
+      );
+    }
+  }
+
+  Future<PaginatedProductResult> getOutOfStockProductsPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final result = await _inventoryService.getOutOfStockProductsPaginated(
+        page: page,
+        limit: limit,
+      );
+
+      final products = (result['data'] as List)
+          .map((row) => Product.fromMap(row as Map<String, dynamic>))
+          .toList();
+
+      return PaginatedProductResult(
+        products: products,
+        total: result['total'] as int,
+        page: result['page'] as int,
+        limit: result['limit'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+    } catch (e) {
+      print('Error getting paginated out of stock products: $e');
+      return PaginatedProductResult(
+        products: [],
+        total: 0,
+        page: page,
+        limit: limit,
+        totalPages: 0,
+      );
+    }
+  }
+
+  Future<PaginatedProductResult> searchProductsPaginated({
+    required String query,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final result = await _inventoryService.searchProductsPaginated(
+        query: query,
+        page: page,
+        limit: limit,
+      );
+
+      final products = (result['data'] as List)
+          .map((row) => Product.fromMap(row as Map<String, dynamic>))
+          .toList();
+
+      return PaginatedProductResult(
+        products: products,
+        total: result['total'] as int,
+        page: result['page'] as int,
+        limit: result['limit'] as int,
+        totalPages: result['totalPages'] as int,
+      );
+    } catch (e) {
+      print('Error searching paginated products: $e');
+      return PaginatedProductResult(
+        products: [],
+        total: 0,
+        page: page,
+        limit: limit,
+        totalPages: 0,
+      );
     }
   }
 }
