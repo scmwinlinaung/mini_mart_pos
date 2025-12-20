@@ -15,33 +15,32 @@ class SupplierCubit extends Cubit<SupplierState> {
   }
 
   Future<void> loadInitialData() async {
-    await Future.wait([
-      loadSuppliers(),
-      loadSupplierStatistics(),
-    ]);
+    await Future.wait([loadSuppliers(), loadSupplierStatistics()]);
   }
 
-  Future<void> loadSuppliers({int page = 1, int limit = 20}) async {
+  Future<void> loadSuppliers({int page = 1, int limit = 10}) async {
     try {
       emit(state.copyWith(isLoading: true, clearError: true));
 
-      final suppliers = await _supplierRepository.getAllSuppliers(page: page, limit: limit);
+      final suppliers = await _supplierRepository.getAllSuppliers(
+        page: page,
+        limit: limit,
+      );
       final totalCount = await _supplierRepository.getSuppliersCount();
       final totalPages = (totalCount / limit).ceil();
 
-      emit(state.copyWith(
-        suppliers: suppliers,
-        currentPage: page,
-        totalPages: totalPages,
-        totalSuppliersCount: totalCount,
-        pageSize: limit,
-        isLoading: false,
-      ));
+      emit(
+        state.copyWith(
+          suppliers: suppliers,
+          currentPage: page,
+          totalPages: totalPages,
+          totalSuppliersCount: totalCount,
+          pageSize: limit,
+          isLoading: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -50,17 +49,17 @@ class SupplierCubit extends Cubit<SupplierState> {
       emit(state.copyWith(isLoadingStatistics: true));
 
       final allStats = await _supplierRepository.getAllSupplierStatistics();
-      final supplierStats = allStats['supplierStatistics'] as List<Map<String, dynamic>>;
+      final supplierStats =
+          allStats['supplierStatistics'] as List<Map<String, dynamic>>;
 
-      emit(state.copyWith(
-        supplierStatistics: supplierStats,
-        isLoadingStatistics: false,
-      ));
+      emit(
+        state.copyWith(
+          supplierStatistics: supplierStats,
+          isLoadingStatistics: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingStatistics: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingStatistics: false, error: e.toString()));
     }
   }
 
@@ -75,53 +74,61 @@ class SupplierCubit extends Cubit<SupplierState> {
       }
 
       // For search, we'll get all results and update pagination accordingly
-      final searchResults = await _supplierRepository.searchSuppliers(searchTerm);
+      final searchResults = await _supplierRepository.searchSuppliers(
+        searchTerm,
+      );
       final totalCount = searchResults.length;
       final totalPages = (totalCount / state.pageSize).ceil();
       final targetPage = page ?? 1;
 
       // Get current page of search results
       final startIndex = (targetPage - 1) * state.pageSize;
-      final currentPageResults = searchResults.skip(startIndex).take(state.pageSize).toList();
+      final currentPageResults = searchResults
+          .skip(startIndex)
+          .take(state.pageSize)
+          .toList();
 
-      emit(state.copyWith(
-        suppliers: currentPageResults,
-        currentPage: targetPage,
-        totalPages: totalPages,
-        totalSuppliersCount: totalCount,
-        isSearching: false,
-      ));
+      emit(
+        state.copyWith(
+          suppliers: currentPageResults,
+          currentPage: targetPage,
+          totalPages: totalPages,
+          totalSuppliersCount: totalCount,
+          isSearching: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isSearching: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isSearching: false, error: e.toString()));
     }
   }
 
   void selectSupplier(Supplier? supplier) {
     if (supplier != null) {
-      emit(state.copyWith(
-        selectedSupplier: supplier,
-        isEditing: true,
-        companyName: supplier.companyName,
-        contactName: supplier.contactName ?? '',
-        phoneNumber: supplier.phoneNumber ?? '',
-        email: supplier.email ?? '',
-        address: supplier.address ?? '',
-        clearAllErrors: true,
-      ));
+      emit(
+        state.copyWith(
+          selectedSupplier: supplier,
+          isEditing: true,
+          companyName: supplier.companyName,
+          contactName: supplier.contactName ?? '',
+          phoneNumber: supplier.phoneNumber ?? '',
+          email: supplier.email ?? '',
+          address: supplier.address ?? '',
+          clearAllErrors: true,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        selectedSupplier: null,
-        isEditing: false,
-        companyName: '',
-        contactName: '',
-        phoneNumber: '',
-        email: '',
-        address: '',
-        clearAllErrors: true,
-      ));
+      emit(
+        state.copyWith(
+          selectedSupplier: null,
+          isEditing: false,
+          companyName: '',
+          contactName: '',
+          phoneNumber: '',
+          email: '',
+          address: '',
+          clearAllErrors: true,
+        ),
+      );
     }
   }
 
@@ -186,10 +193,7 @@ class SupplierCubit extends Cubit<SupplierState> {
 
       emit(state.copyWith(isLoading: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -203,10 +207,7 @@ class SupplierCubit extends Cubit<SupplierState> {
 
       emit(state.copyWith(isLoading: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -246,11 +247,20 @@ class SupplierCubit extends Cubit<SupplierState> {
       return false;
     }
     if (companyName.length > 100) {
-      emit(state.copyWith(companyNameError: 'Company name must be less than 100 characters'));
+      emit(
+        state.copyWith(
+          companyNameError: 'Company name must be less than 100 characters',
+        ),
+      );
       return false;
     }
     if (!RegExp(r'^[a-zA-Z0-9\s\-&().,]+$').hasMatch(companyName)) {
-      emit(state.copyWith(companyNameError: 'Company name can only contain letters, numbers, spaces, and common symbols'));
+      emit(
+        state.copyWith(
+          companyNameError:
+              'Company name can only contain letters, numbers, spaces, and common symbols',
+        ),
+      );
       return false;
     }
 
@@ -262,11 +272,20 @@ class SupplierCubit extends Cubit<SupplierState> {
     final contactName = state.contactName;
     if (contactName.isNotEmpty) {
       if (contactName.length > 100) {
-        emit(state.copyWith(contactNameError: 'Contact name must be less than 100 characters'));
+        emit(
+          state.copyWith(
+            contactNameError: 'Contact name must be less than 100 characters',
+          ),
+        );
         return false;
       }
       if (!RegExp(r'^[a-zA-Z\s\.\-\x27]+$').hasMatch(contactName)) {
-        emit(state.copyWith(contactNameError: 'Contact name can only contain letters, spaces, and common name symbols'));
+        emit(
+          state.copyWith(
+            contactNameError:
+                'Contact name can only contain letters, spaces, and common name symbols',
+          ),
+        );
         return false;
       }
     }
@@ -279,11 +298,20 @@ class SupplierCubit extends Cubit<SupplierState> {
     final phoneNumber = state.phoneNumber;
     if (phoneNumber.isNotEmpty) {
       if (phoneNumber.length > 20) {
-        emit(state.copyWith(phoneNumberError: 'Phone number must be less than 20 characters'));
+        emit(
+          state.copyWith(
+            phoneNumberError: 'Phone number must be less than 20 characters',
+          ),
+        );
         return false;
       }
       if (!RegExp(r'^[\d\s\-\+\(\)]+$').hasMatch(phoneNumber)) {
-        emit(state.copyWith(phoneNumberError: 'Phone number can only contain digits, spaces, and common phone symbols'));
+        emit(
+          state.copyWith(
+            phoneNumberError:
+                'Phone number can only contain digits, spaces, and common phone symbols',
+          ),
+        );
         return false;
       }
     }
@@ -296,7 +324,9 @@ class SupplierCubit extends Cubit<SupplierState> {
     final email = state.email;
     if (email.isNotEmpty) {
       if (email.length > 100) {
-        emit(state.copyWith(emailError: 'Email must be less than 100 characters'));
+        emit(
+          state.copyWith(emailError: 'Email must be less than 100 characters'),
+        );
         return false;
       }
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
@@ -312,7 +342,11 @@ class SupplierCubit extends Cubit<SupplierState> {
   bool _validateAddress() {
     final address = state.address;
     if (address.isNotEmpty && address.length > 500) {
-      emit(state.copyWith(addressError: 'Address must be less than 500 characters'));
+      emit(
+        state.copyWith(
+          addressError: 'Address must be less than 500 characters',
+        ),
+      );
       return false;
     }
 
@@ -327,12 +361,11 @@ class SupplierCubit extends Cubit<SupplierState> {
         throw Exception('Supplier not found');
       }
 
-      final statistics = await _supplierRepository.getSupplierStatistics(supplierId);
+      final statistics = await _supplierRepository.getSupplierStatistics(
+        supplierId,
+      );
 
-      return {
-        'supplier': supplier,
-        'statistics': statistics,
-      };
+      return {'supplier': supplier, 'statistics': statistics};
     } catch (e) {
       throw Exception('Failed to get supplier details: $e');
     }

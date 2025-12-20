@@ -5,10 +5,11 @@ import '../../core/services/database_service.dart';
 class SupplierRepository {
   final SupplierDatabaseService _supplierDbService;
 
-  SupplierRepository(DatabaseService dbService) : _supplierDbService = SupplierDatabaseService(dbService);
+  SupplierRepository(DatabaseService dbService)
+    : _supplierDbService = SupplierDatabaseService(dbService);
 
   // CRUD Operations
-  Future<List<Supplier>> getAllSuppliers({int page = 1, int limit = 20}) async {
+  Future<List<Supplier>> getAllSuppliers({int page = 1, int limit = 10}) async {
     try {
       return await _supplierDbService.getAllSuppliers(page: page, limit: limit);
     } catch (e) {
@@ -51,7 +52,9 @@ class SupplierRepository {
       );
 
       // Check if company name is already taken
-      final isCompanyNameTaken = await _supplierDbService.isCompanyNameTaken(companyName);
+      final isCompanyNameTaken = await _supplierDbService.isCompanyNameTaken(
+        companyName,
+      );
       if (isCompanyNameTaken) {
         throw Exception('Company name already exists');
       }
@@ -86,9 +89,14 @@ class SupplierRepository {
   }) async {
     try {
       // Validate input if provided
-      if (companyName != null || contactName != null || phoneNumber != null ||
-          email != null || address != null) {
-        final existingSupplier = await _supplierDbService.getSupplierById(supplierId);
+      if (companyName != null ||
+          contactName != null ||
+          phoneNumber != null ||
+          email != null ||
+          address != null) {
+        final existingSupplier = await _supplierDbService.getSupplierById(
+          supplierId,
+        );
         if (existingSupplier == null) {
           throw Exception('Supplier not found');
         }
@@ -180,7 +188,10 @@ class SupplierRepository {
 
   Future<List<Supplier>> getUnusedSuppliers() async {
     try {
-      final allSuppliers = await getAllSuppliers(page: 1, limit: 1000); // Get all for this operation
+      final allSuppliers = await getAllSuppliers(
+        page: 1,
+        limit: 1000,
+      ); // Get all for this operation
       final activeSuppliers = await getActiveSuppliers();
 
       // Return suppliers that are not associated with any products
@@ -211,7 +222,8 @@ class SupplierRepository {
   Future<List<Map<String, dynamic>>> getSupplierPerformanceReport() async {
     try {
       final allStats = await getAllSupplierStatistics();
-      final supplierStats = allStats['supplierStatistics'] as List<Map<String, dynamic>>;
+      final supplierStats =
+          allStats['supplierStatistics'] as List<Map<String, dynamic>>;
 
       // Calculate additional metrics
       final report = supplierStats.map((stat) {
@@ -221,10 +233,14 @@ class SupplierRepository {
         final totalValue = stat['totalValue'] as double;
 
         // Calculate average stock per product
-        final avgStockPerProduct = productCount > 0 ? totalStock / productCount : 0.0;
+        final avgStockPerProduct = productCount > 0
+            ? totalStock / productCount
+            : 0.0;
 
         // Calculate average value per product
-        final avgValuePerProduct = productCount > 0 ? totalValue / productCount : 0.0;
+        final avgValuePerProduct = productCount > 0
+            ? totalValue / productCount
+            : 0.0;
 
         // Calculate stock health percentage
         final stockHealthPercentage = productCount > 0
@@ -243,7 +259,10 @@ class SupplierRepository {
       }).toList();
 
       // Sort by total value descending
-      report.sort((a, b) => (b['totalValue'] as double).compareTo(a['totalValue'] as double));
+      report.sort(
+        (a, b) =>
+            (b['totalValue'] as double).compareTo(a['totalValue'] as double),
+      );
 
       return report;
     } catch (e) {
@@ -251,9 +270,15 @@ class SupplierRepository {
     }
   }
 
-  Future<bool> isCompanyNameAvailable(String companyName, {int? excludeSupplierId}) async {
+  Future<bool> isCompanyNameAvailable(
+    String companyName, {
+    int? excludeSupplierId,
+  }) async {
     try {
-      return !(await _supplierDbService.isCompanyNameTaken(companyName, excludeSupplierId: excludeSupplierId));
+      return !(await _supplierDbService.isCompanyNameTaken(
+        companyName,
+        excludeSupplierId: excludeSupplierId,
+      ));
     } catch (e) {
       throw Exception('Failed to check company name availability: $e');
     }
@@ -262,7 +287,10 @@ class SupplierRepository {
   Future<bool> isEmailAvailable(String email, {int? excludeSupplierId}) async {
     try {
       if (email.trim().isEmpty) return true;
-      return !(await _supplierDbService.isEmailTaken(email, excludeSupplierId: excludeSupplierId));
+      return !(await _supplierDbService.isEmailTaken(
+        email,
+        excludeSupplierId: excludeSupplierId,
+      ));
     } catch (e) {
       throw Exception('Failed to check email availability: $e');
     }
@@ -312,7 +340,9 @@ class SupplierRepository {
       throw Exception('Company name must be less than 100 characters');
     }
     if (!RegExp(r'^[a-zA-Z0-9\s\-&().,]+$').hasMatch(companyName)) {
-      throw Exception('Company name can only contain letters, numbers, spaces, and common symbols');
+      throw Exception(
+        'Company name can only contain letters, numbers, spaces, and common symbols',
+      );
     }
 
     // Contact name validation
@@ -321,7 +351,9 @@ class SupplierRepository {
         throw Exception('Contact name must be less than 100 characters');
       }
       if (!RegExp(r'^[a-zA-Z\s\.\-\x27]+$').hasMatch(contactName)) {
-        throw Exception('Contact name can only contain letters, spaces, and common name symbols');
+        throw Exception(
+          'Contact name can only contain letters, spaces, and common name symbols',
+        );
       }
     }
 
@@ -331,7 +363,9 @@ class SupplierRepository {
         throw Exception('Phone number must be less than 20 characters');
       }
       if (!RegExp(r'^[\d\s\-\+\(\)]+$').hasMatch(phoneNumber)) {
-        throw Exception('Phone number can only contain digits, spaces, and common phone symbols');
+        throw Exception(
+          'Phone number can only contain digits, spaces, and common phone symbols',
+        );
       }
     }
 
@@ -363,8 +397,13 @@ class SupplierRepository {
           .map((stat) => stat['supplierId'] as int)
           .toList();
 
-      final allSuppliers = await getAllSuppliers(page: 1, limit: 1000); // Get all for this operation
-      return allSuppliers.where((supplier) => topSupplierIds.contains(supplier.id)).toList();
+      final allSuppliers = await getAllSuppliers(
+        page: 1,
+        limit: 1000,
+      ); // Get all for this operation
+      return allSuppliers
+          .where((supplier) => topSupplierIds.contains(supplier.id))
+          .toList();
     } catch (e) {
       throw Exception('Failed to fetch top suppliers by value: $e');
     }

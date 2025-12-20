@@ -6,7 +6,7 @@ class SupplierDatabaseService {
 
   SupplierDatabaseService(this._databaseService);
 
-  Future<List<Supplier>> getAllSuppliers({int page = 1, int limit = 20}) async {
+  Future<List<Supplier>> getAllSuppliers({int page = 1, int limit = 10}) async {
     final conn = await _databaseService.connection;
     final offset = (page - 1) * limit;
 

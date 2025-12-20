@@ -192,7 +192,9 @@ class InventoryDatabaseService {
     return await conn.runTx((txn) async {
       // Get current stock quantity
       final currentResult = await txn.execute(
-        Sql.named('SELECT stock_quantity FROM products WHERE product_id = @product_id'),
+        Sql.named(
+          'SELECT stock_quantity FROM products WHERE product_id = @product_id',
+        ),
         parameters: {'product_id': productId},
       );
 
@@ -210,10 +212,7 @@ class InventoryDatabaseService {
         SET stock_quantity = @new_quantity, updated_at = NOW()
         WHERE product_id = @product_id
       '''),
-        parameters: {
-          'new_quantity': newQuantity,
-          'product_id': productId,
-        },
+        parameters: {'new_quantity': newQuantity, 'product_id': productId},
       );
 
       // Record stock movement
@@ -235,7 +234,10 @@ class InventoryDatabaseService {
   }
 
   // Get stock movement history for a product
-  Future<List<Map<String, dynamic>>> getStockMovementHistory(int productId, {int limit = 100}) async {
+  Future<List<Map<String, dynamic>>> getStockMovementHistory(
+    int productId, {
+    int limit = 100,
+  }) async {
     final conn = await _dbService.connection;
     final result = await conn.execute(
       Sql.named('''
@@ -254,10 +256,7 @@ class InventoryDatabaseService {
       ORDER BY sm.created_at DESC
       LIMIT @limit
     '''),
-      parameters: {
-        'product_id': productId,
-        'limit': limit,
-      },
+      parameters: {'product_id': productId, 'limit': limit},
     );
 
     return result.map((row) => row.toColumnMap()).toList();
@@ -306,7 +305,9 @@ class InventoryDatabaseService {
   }
 
   // Get recent stock movements
-  Future<List<Map<String, dynamic>>> getRecentStockMovements({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getRecentStockMovements({
+    int limit = 50,
+  }) async {
     final conn = await _dbService.connection;
     final result = await conn.execute(
       Sql.named('''
@@ -336,7 +337,7 @@ class InventoryDatabaseService {
   // Paginated methods for product lists
   Future<Map<String, dynamic>> getAllProductsWithStockPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
     String sortBy = 'product_name',
     String sortOrder = 'ASC',
   }) async {
@@ -345,13 +346,23 @@ class InventoryDatabaseService {
 
     // Validate sortBy and sortOrder to prevent SQL injection
     final validSortColumns = [
-      'product_name', 'barcode', 'category_name', 'supplier_name',
-      'cost_price', 'sell_price', 'stock_quantity', 'created_at'
+      'product_name',
+      'barcode',
+      'category_name',
+      'supplier_name',
+      'cost_price',
+      'sell_price',
+      'stock_quantity',
+      'created_at',
     ];
     final validSortOrders = ['ASC', 'DESC'];
 
-    final safeSortBy = validSortColumns.contains(sortBy) ? sortBy : 'product_name';
-    final safeSortOrder = validSortOrders.contains(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
+    final safeSortBy = validSortColumns.contains(sortBy)
+        ? sortBy
+        : 'product_name';
+    final safeSortOrder = validSortOrders.contains(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : 'ASC';
 
     // Get total count
     final countResult = await conn.execute('''
@@ -360,7 +371,8 @@ class InventoryDatabaseService {
     final total = countResult.first[0] as int;
 
     // Get paginated data with safe ORDER BY clause
-    final dataResult = await conn.execute('''
+    final dataResult = await conn.execute(
+      '''
       SELECT
         p.product_id,
         p.barcode,
@@ -387,7 +399,9 @@ class InventoryDatabaseService {
       WHERE p.is_active = true
       ORDER BY $safeSortBy $safeSortOrder
       LIMIT \$1 OFFSET \$2
-    ''', parameters: [limit, offset]);
+    ''',
+      parameters: [limit, offset],
+    );
 
     return {
       'data': dataResult.map((row) => row.toColumnMap()).toList(),
@@ -400,7 +414,7 @@ class InventoryDatabaseService {
 
   Future<Map<String, dynamic>> getLowStockProductsPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     final conn = await _dbService.connection;
     final offset = (page - 1) * limit;
@@ -413,7 +427,8 @@ class InventoryDatabaseService {
     final total = countResult.first[0] as int;
 
     // Get paginated data
-    final dataResult = await conn.execute('''
+    final dataResult = await conn.execute(
+      '''
       SELECT
         p.product_id,
         p.barcode,
@@ -440,7 +455,9 @@ class InventoryDatabaseService {
       WHERE p.stock_quantity <= p.reorder_level AND p.stock_quantity > 0 AND p.is_active = true
       ORDER BY p.product_name
       LIMIT \$1 OFFSET \$2
-    ''', parameters: [limit, offset]);
+    ''',
+      parameters: [limit, offset],
+    );
 
     return {
       'data': dataResult.map((row) => row.toColumnMap()).toList(),
@@ -453,7 +470,7 @@ class InventoryDatabaseService {
 
   Future<Map<String, dynamic>> getOutOfStockProductsPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     final conn = await _dbService.connection;
     final offset = (page - 1) * limit;
@@ -466,7 +483,8 @@ class InventoryDatabaseService {
     final total = countResult.first[0] as int;
 
     // Get paginated data
-    final dataResult = await conn.execute('''
+    final dataResult = await conn.execute(
+      '''
       SELECT
         p.product_id,
         p.barcode,
@@ -493,7 +511,9 @@ class InventoryDatabaseService {
       WHERE p.stock_quantity <= 0 AND p.is_active = true
       ORDER BY p.product_name
       LIMIT \$1 OFFSET \$2
-    ''', parameters: [limit, offset]);
+    ''',
+      parameters: [limit, offset],
+    );
 
     return {
       'data': dataResult.map((row) => row.toColumnMap()).toList(),
@@ -507,21 +527,25 @@ class InventoryDatabaseService {
   Future<Map<String, dynamic>> searchProductsPaginated({
     required String query,
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     final conn = await _dbService.connection;
     final offset = (page - 1) * limit;
     final searchPattern = '%$query%';
 
     // Get total count
-    final countResult = await conn.execute('''
+    final countResult = await conn.execute(
+      '''
       SELECT COUNT(*) as total FROM products
       WHERE (product_name ILIKE \$1 OR barcode ILIKE \$1) AND is_active = true
-    ''', parameters: [searchPattern]);
+    ''',
+      parameters: [searchPattern],
+    );
     final total = countResult.first[0] as int;
 
     // Get paginated data
-    final dataResult = await conn.execute('''
+    final dataResult = await conn.execute(
+      '''
       SELECT
         p.product_id,
         p.barcode,
@@ -548,7 +572,9 @@ class InventoryDatabaseService {
       WHERE (p.product_name ILIKE \$1 OR p.barcode ILIKE \$1) AND p.is_active = true
       ORDER BY p.product_name
       LIMIT \$2 OFFSET \$3
-    ''', parameters: [searchPattern, limit, offset]);
+    ''',
+      parameters: [searchPattern, limit, offset],
+    );
 
     return {
       'data': dataResult.map((row) => row.toColumnMap()).toList(),

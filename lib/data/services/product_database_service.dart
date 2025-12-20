@@ -9,7 +9,7 @@ class ProductDatabaseService {
   // Get all products with categories, suppliers, and unit types
   Future<List<Map<String, dynamic>>> getAllProducts({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     final conn = await _dbService.connection;
     final offset = (page - 1) * limit;

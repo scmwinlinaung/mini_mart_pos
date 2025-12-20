@@ -28,7 +28,7 @@ class InventoryRepository {
   }
 
   // Get all products with current stock levels
-  Future<List<Product>> getAllProducts({int page = 1, int limit = 20}) async {
+  Future<List<Product>> getAllProducts({int page = 1, int limit = 10}) async {
     try {
       final result = await _inventoryService.getAllProductsWithStockPaginated(
         page: page,
@@ -109,9 +109,15 @@ class InventoryRepository {
   }
 
   // Get stock movement history for a product
-  Future<List<StockMovement>> getStockMovementHistory(int productId, {int limit = 100}) async {
+  Future<List<StockMovement>> getStockMovementHistory(
+    int productId, {
+    int limit = 100,
+  }) async {
     try {
-      final results = await _inventoryService.getStockMovementHistory(productId, limit: limit);
+      final results = await _inventoryService.getStockMovementHistory(
+        productId,
+        limit: limit,
+      );
       return results.map((row) => StockMovement.fromMap(row)).toList();
     } catch (e) {
       print('Error getting stock movement history: $e');
@@ -143,7 +149,7 @@ class InventoryRepository {
   // Paginated methods
   Future<PaginatedProductResult> getAllProductsPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
     String sortBy = 'product_name',
     String sortOrder = 'ASC',
   }) async {
@@ -180,7 +186,7 @@ class InventoryRepository {
 
   Future<PaginatedProductResult> getLowStockProductsPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     try {
       final result = await _inventoryService.getLowStockProductsPaginated(
@@ -213,7 +219,7 @@ class InventoryRepository {
 
   Future<PaginatedProductResult> getOutOfStockProductsPaginated({
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     try {
       final result = await _inventoryService.getOutOfStockProductsPaginated(
@@ -247,7 +253,7 @@ class InventoryRepository {
   Future<PaginatedProductResult> searchProductsPaginated({
     required String query,
     int page = 1,
-    int limit = 20,
+    int limit = 10,
   }) async {
     try {
       final result = await _inventoryService.searchProductsPaginated(
