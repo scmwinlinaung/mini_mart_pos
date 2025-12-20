@@ -23,6 +23,12 @@ class CategoryState {
   // Statistics loading
   final bool isLoadingStatistics;
 
+  // Pagination state
+  final int currentPage;
+  final int totalPages;
+  final int itemsPerPage;
+  final int totalItems;
+
   const CategoryState({
     this.categories = const [],
     this.selectedCategory,
@@ -37,6 +43,10 @@ class CategoryState {
     this.searchTerm = '',
     this.isSearching = false,
     this.isLoadingStatistics = false,
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.itemsPerPage = 20,
+    this.totalItems = 0,
   });
 
   CategoryState copyWith({
@@ -57,6 +67,10 @@ class CategoryState {
     bool clearNameError = false,
     bool clearDescriptionError = false,
     bool clearAllErrors = false,
+    int? currentPage,
+    int? totalPages,
+    int? itemsPerPage,
+    int? totalItems,
   }) {
     return CategoryState(
       categories: categories ?? this.categories,
@@ -72,6 +86,10 @@ class CategoryState {
       searchTerm: searchTerm ?? this.searchTerm,
       isSearching: isSearching ?? this.isSearching,
       isLoadingStatistics: isLoadingStatistics ?? this.isLoadingStatistics,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      itemsPerPage: itemsPerPage ?? this.itemsPerPage,
+      totalItems: totalItems ?? this.totalItems,
     );
   }
 

@@ -6,6 +6,7 @@ import '../widgets/desktop_app_bar.dart';
 import '../widgets/desktop_scaffold.dart';
 import '../widgets/language_selector.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/widgets/pagination_controls.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({super.key});
@@ -335,7 +336,7 @@ class CategoryList extends StatelessWidget {
                 );
               }
 
-              if (state.filteredCategories.isEmpty && state.searchTerm.isNotEmpty) {
+              if (state.categories.isEmpty && state.searchTerm.isNotEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -365,7 +366,7 @@ class CategoryList extends StatelessWidget {
                 );
               }
 
-              if (state.filteredCategories.isEmpty) {
+              if (state.categories.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -395,139 +396,170 @@ class CategoryList extends StatelessWidget {
                 );
               }
 
-              return SingleChildScrollView(
-                child: DataTable(
-                  columnSpacing: 16,
-                  columns: [
-                    DataColumn(
-                      label: Text(AppStrings.categoryName),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.description),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.products),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.stock),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.actions),
-                    ),
-                  ],
-                  rows: state.filteredCategories.map((category) {
-                    final statistics = state.categoryStatistics
-                        .where((stat) => stat['categoryId'] == category.id)
-                        .firstOrNull;
-
-                    final productCount = statistics?['productCount'] as int? ?? 0;
-                    final totalStock = statistics?['totalStock'] as int? ?? 0;
-                    final lowStockCount = statistics?['lowStockCount'] as int? ?? 0;
-
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.category,
-                                size: 20,
-                                color: Colors.blue.shade600,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(category.name),
-                            ],
-                          ),
-                        ),
-                        DataCell(
-                          SizedBox(
-                            width: 200,
-                            child: Text(
-                              category.description ?? AppStrings.noDescription,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: category.description != null
-                                    ? null
-                                    : Colors.grey.shade500,
-                                fontStyle: category.description != null
-                                    ? null
-                                    : FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Row(
-                            children: [
-                              Text(
-                                productCount.toString(),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              if (lowStockCount > 0) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade100,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '!',
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            totalStock.toString(),
-                            style: TextStyle(
-                              color: totalStock > 0 ? Colors.green.shade700 : Colors.grey.shade600,
-                              fontWeight: totalStock > 0 ? FontWeight.bold : null,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Edit Button
-                              IconButton(
-                                onPressed: () => context.read<CategoryCubit>().selectCategory(category),
-                                icon: const Icon(Icons.edit),
-                                tooltip: AppStrings.edit,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                              ),
-                              // Delete Button
-                              IconButton(
-                                onPressed: productCount > 0
-                                    ? null
-                                    : () => _showDeleteConfirmation(context, category),
-                                icon: const Icon(Icons.delete),
-                                tooltip: productCount > 0 ? AppStrings.cannotDelete : AppStrings.delete,
-                                color: productCount > 0 ? Colors.grey.shade400 : Colors.red,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                              ),
-                            ],
+              return Column(
+                children: [
+                  // Page info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Showing ${((state.currentPage - 1) * state.itemsPerPage) + 1}-${(state.currentPage - 1) * state.itemsPerPage + state.categories.length} of ${state.totalItems}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
                           ),
                         ),
                       ],
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                  // Table
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columnSpacing: 16,
+                        columns: [
+                          DataColumn(
+                            label: Text(AppStrings.categoryName),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.description),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.products),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.stock),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.actions),
+                          ),
+                        ],
+                        rows: state.categories.map((category) {
+                          final statistics = state.categoryStatistics
+                              .where((stat) => stat['categoryId'] == category.id)
+                              .firstOrNull;
+
+                          final productCount = statistics?['productCount'] as int? ?? 0;
+                          final totalStock = statistics?['totalStock'] as int? ?? 0;
+                          final lowStockCount = statistics?['lowStockCount'] as int? ?? 0;
+
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.category,
+                                      size: 20,
+                                      color: Colors.blue.shade600,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(category.name),
+                                  ],
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: 200,
+                                  child: Text(
+                                    category.description ?? AppStrings.noDescription,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: category.description != null
+                                          ? null
+                                          : Colors.grey.shade500,
+                                      fontStyle: category.description != null
+                                          ? null
+                                          : FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Row(
+                                  children: [
+                                    Text(
+                                      productCount.toString(),
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    if (lowStockCount > 0) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '!',
+                                          style: TextStyle(
+                                            color: Colors.red.shade700,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  totalStock.toString(),
+                                  style: TextStyle(
+                                    color: totalStock > 0 ? Colors.green.shade700 : Colors.grey.shade600,
+                                    fontWeight: totalStock > 0 ? FontWeight.bold : null,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Edit Button
+                                    IconButton(
+                                      onPressed: () => context.read<CategoryCubit>().selectCategory(category),
+                                      icon: const Icon(Icons.edit),
+                                      tooltip: AppStrings.edit,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                    ),
+                                    // Delete Button
+                                    IconButton(
+                                      onPressed: productCount > 0
+                                          ? null
+                                          : () => _showDeleteConfirmation(context, category),
+                                      icon: const Icon(Icons.delete),
+                                      tooltip: productCount > 0 ? AppStrings.cannotDelete : AppStrings.delete,
+                                      color: productCount > 0 ? Colors.grey.shade400 : Colors.red,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  // Pagination Controls
+                  PaginationControls<CategoryCubit, CategoryState>(
+                    cubit: context.read<CategoryCubit>(),
+                    currentPage: state.currentPage,
+                    totalPages: state.totalPages,
+                    onPageChanged: (page) => context.read<CategoryCubit>().goToPage(page),
+                    itemsPerPage: state.itemsPerPage,
+                    onItemsPerPageChanged: (itemsPerPage) => context.read<CategoryCubit>().changeItemsPerPage(itemsPerPage),
+                  ),
+                ],
               );
             },
           ),

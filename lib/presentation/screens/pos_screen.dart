@@ -3,9 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/logic/cart/cart_cubit.dart';
 import '../../data/logic/scanner/scanner_cubit.dart';
 import '../../data/logic/auth/auth_cubit.dart';
-import '../../data/repositories/pos_repository.dart';
+import '../../data/models/product.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/desktop_scaffold.dart';
+import '../../core/widgets/paginated_table.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({Key? key}) : super(key: key);
@@ -17,6 +18,8 @@ class PosScreen extends StatefulWidget {
 class _PosScreenState extends State<PosScreen> {
   final TextEditingController _scanCtrl = TextEditingController();
   final FocusNode _scanFocus = FocusNode();
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
 
   @override
   void initState() {
@@ -152,7 +155,13 @@ class _PosScreenState extends State<PosScreen> {
                   const Spacer(),
                   if (state.items.isNotEmpty)
                     TextButton(
-                      onPressed: () => context.read<CartCubit>().clearCart(),
+                      onPressed: () {
+                        context.read<CartCubit>().clearCart();
+                        setState(() {
+                          _currentPage =
+                              1; // Reset pagination when clearing cart
+                        });
+                      },
                       child: const Text('Clear All'),
                     ),
                 ],
@@ -188,102 +197,136 @@ class _PosScreenState extends State<PosScreen> {
                         ],
                       ),
                     )
-                  : ListView.builder(
+                  : Padding(
                       padding: const EdgeInsets.all(8),
-                      itemCount: state.items.length,
-                      itemBuilder: (context, index) {
-                        final item = state.items[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            leading: CircleAvatar(
+                      child: PaginatedTable<CartItem>(
+                        data: _getPaginatedItems(state.items),
+                        columns: [
+                          TableColumnConfig<CartItem>(
+                            headerKey: 'Qty',
+                            width: 60,
+                            isFixed: true,
+                            alignment: Alignment.center,
+                            cellBuilder: (item, index) => CircleAvatar(
                               backgroundColor: Theme.of(context).primaryColor,
+                              radius: 16,
                               child: Text(
                                 '${item.quantity}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
-                            title: Text(
-                              item.product.productName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Barcode: ${item.product.barcode}\n'
-                              'Price: ${item.product.sellPrice}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                            trailing: Column(
+                          ),
+                          TableColumnConfig<CartItem>(
+                            headerKey: 'Product Name',
+                            cellBuilder: (item, index) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  item.formattedTotal,
+                                  item.product.productName,
                                   style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                      ),
-                                      iconSize: 20,
-                                      onPressed: () => context
-                                          .read<CartCubit>()
-                                          .updateQuantity(
-                                            item.product.productId,
-                                            item.quantity - 1,
-                                          ),
-                                    ),
-                                    Text(
-                                      '${item.quantity}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add_circle_outline,
-                                      ),
-                                      iconSize: 20,
-                                      onPressed: () => context
-                                          .read<CartCubit>()
-                                          .updateQuantity(
-                                            item.product.productId,
-                                            item.quantity + 1,
-                                          ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      iconSize: 20,
-                                      onPressed: () => context
-                                          .read<CartCubit>()
-                                          .removeItem(item.product.productId),
-                                    ),
-                                  ],
+                                Text(
+                                  'Barcode: ${item.product.barcode}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
+                          TableColumnConfig<CartItem>(
+                            headerKey: 'Price',
+                            width: 80,
+                            isFixed: true,
+                            alignment: Alignment.center,
+                            cellBuilder: (item, index) => Text(
+                              item.formattedUnitPrice,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          TableColumnConfig<CartItem>(
+                            headerKey: 'Total',
+                            width: 80,
+                            isFixed: true,
+                            alignment: Alignment.center,
+                            cellBuilder: (item, index) => Text(
+                              item.formattedTotal,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                        actions: [
+                          ActionConfig<CartItem>(
+                            icon: Icons.remove_circle_outline,
+                            tooltipText: 'Decrease quantity',
+                            onPressed: (item) =>
+                                context.read<CartCubit>().updateQuantity(
+                                  item.product.productId,
+                                  item.quantity - 1,
+                                ),
+                          ),
+                          ActionConfig<CartItem>(
+                            icon: Icons.add_circle_outline,
+                            tooltipText: 'Increase quantity',
+                            onPressed: (item) =>
+                                context.read<CartCubit>().updateQuantity(
+                                  item.product.productId,
+                                  item.quantity + 1,
+                                ),
+                          ),
+                          ActionConfig<CartItem>(
+                            icon: Icons.delete_outline,
+                            tooltipText: 'Remove item',
+                            color: Colors.red,
+                            onPressed: (item) => context
+                                .read<CartCubit>()
+                                .removeItem(item.product.productId),
+                          ),
+                        ],
+                        pagination: PaginationConfig(
+                          currentPage: _currentPage,
+                          totalPages:
+                              (state.items.length + _itemsPerPage - 1) ~/
+                              _itemsPerPage,
+                          totalItems: state.items.length,
+                          itemsPerPage: _itemsPerPage,
+                          onPageChanged: (page) {
+                            setState(() {
+                              _currentPage = page;
+                            });
+                          },
+                          onItemsPerPageChanged: (itemsPerPage) {
+                            setState(() {
+                              _itemsPerPage = itemsPerPage;
+                              _currentPage =
+                                  1; // Reset to first page when changing items per page
+                            });
+                          },
+                          availableItemsPerPage: [5, 10, 20, 50],
+                        ),
+                        emptyMessage: 'No items in cart',
+                        emptyIcon: const Icon(
+                          Icons.shopping_cart_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        rowHeight: 80,
+                      ),
                     ),
             ),
           ],
@@ -447,7 +490,7 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           Text(
-            '\$${(amount / 100).toStringAsFixed(2)}',
+            '\$ $amount',
             style: TextStyle(
               fontSize: isTotal ? 18 : 14,
               fontWeight: FontWeight.bold,
@@ -456,6 +499,20 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  List<CartItem> _getPaginatedItems(List<CartItem> allItems) {
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final endIndex = startIndex + _itemsPerPage;
+
+    if (startIndex >= allItems.length) {
+      return [];
+    }
+
+    return allItems.sublist(
+      startIndex,
+      endIndex > allItems.length ? allItems.length : endIndex,
     );
   }
 

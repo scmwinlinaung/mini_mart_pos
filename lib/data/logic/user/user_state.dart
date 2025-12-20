@@ -27,6 +27,12 @@ class UserState {
   final String? passwordError;
   final String? confirmPasswordError;
 
+  // Pagination state
+  final int currentPage;
+  final int totalPages;
+  final int itemsPerPage;
+  final int totalItems;
+
   const UserState({
     this.users = const [],
     this.selectedUser,
@@ -49,6 +55,10 @@ class UserState {
     this.phoneError,
     this.passwordError,
     this.confirmPasswordError,
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.itemsPerPage = 20,
+    this.totalItems = 0,
   });
 
   UserState copyWith({
@@ -81,6 +91,10 @@ class UserState {
     bool clearPasswordError = false,
     bool clearConfirmPasswordError = false,
     bool clearAllErrors = false,
+    int? currentPage,
+    int? totalPages,
+    int? itemsPerPage,
+    int? totalItems,
   }) {
     return UserState(
       users: users ?? this.users,
@@ -104,6 +118,10 @@ class UserState {
       phoneError: clearPhoneError || clearAllErrors ? null : (phoneError ?? this.phoneError),
       passwordError: clearPasswordError || clearAllErrors ? null : (passwordError ?? this.passwordError),
       confirmPasswordError: clearConfirmPasswordError || clearAllErrors ? null : (confirmPasswordError ?? this.confirmPasswordError),
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      itemsPerPage: itemsPerPage ?? this.itemsPerPage,
+      totalItems: totalItems ?? this.totalItems,
     );
   }
 

@@ -115,6 +115,7 @@ CREATE TABLE sales (
     -- MONEY CALCULATIONS
     tax_amount INT DEFAULT 0,
     discount_amount INT DEFAULT 0,
+    sub_total INT DEFAULT 0,
     grand_total INT NOT NULL, -- (total_price + tax_amount - discount_amount)
 
     payment_method TEXT CHECK (payment_method IN ('CASH', 'CARD', 'QR', 'CREDIT')),
@@ -148,7 +149,7 @@ CREATE TABLE purchases (
 
     supplier_invoice_no varchar(50),
     total_amount INT DEFAULT 0,
-    status TEXT DEFAULT 'RECEIVED', -- 'PENDING', 'RECEIVED'
+    status varchar(8) DEFAULT 'RECEIVED', -- 'PENDING', 'RECEIVED'
 
     purchase_date TIMESTAMPTZ DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE,

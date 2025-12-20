@@ -1,8 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/purchases.dart';
 import '../../data/models/product.dart';
-import '../widgets/barcode_scanner_widget.dart';
 
 class AddPurchaseDialog extends StatefulWidget {
   const AddPurchaseDialog({Key? key}) : super(key: key);
@@ -183,11 +181,16 @@ class _AddPurchaseDialogState extends State<AddPurchaseDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: SizedBox(
-        width: 800,
-        height: 700,
-        child: Column(
-          children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: math.min(800, MediaQuery.of(context).size.width * 0.9),
+          maxHeight: math.min(700, MediaQuery.of(context).size.height * 0.9),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Column(
+            children: [
             // Header
             Container(
               padding: const EdgeInsets.all(16),
@@ -233,7 +236,7 @@ class _AddPurchaseDialogState extends State<AddPurchaseDialog> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: _selectedSupplierId,
+                              initialValue: _selectedSupplierId,
                               decoration: const InputDecoration(
                                 labelText: 'Supplier *',
                                 border: OutlineInputBorder(),
@@ -407,8 +410,9 @@ class _AddPurchaseDialogState extends State<AddPurchaseDialog> {
                                       ),
                                     ),
                                     // Items
-                                    Expanded(
+                                    Flexible(
                                       child: ListView.builder(
+                                        shrinkWrap: false,
                                         itemCount: _purchaseItems.length,
                                         itemBuilder: (context, index) {
                                           final item = _purchaseItems[index];
@@ -592,6 +596,7 @@ class _AddPurchaseDialogState extends State<AddPurchaseDialog> {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -673,14 +678,19 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: SizedBox(
-        width: 500,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: math.min(500, MediaQuery.of(context).size.width * 0.8),
+          maxHeight: math.min(600, MediaQuery.of(context).size.height * 0.8),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Text(
                 'Add Purchase Item',
                 style: Theme.of(
@@ -693,7 +703,7 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
                 child: Column(
                   children: [
                     DropdownButtonFormField<Product>(
-                      value: _selectedProduct,
+                      initialValue: _selectedProduct,
                       decoration: const InputDecoration(
                         labelText: 'Product *',
                         border: OutlineInputBorder(),
@@ -816,6 +826,7 @@ class _AddPurchaseItemDialogState extends State<AddPurchaseItemDialog> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

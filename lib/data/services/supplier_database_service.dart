@@ -10,7 +10,8 @@ class SupplierDatabaseService {
     final conn = await _databaseService.connection;
     final offset = (page - 1) * limit;
 
-    final result = await conn.execute('''
+    final result = await conn.execute(
+      '''
       SELECT
         s.*,
         COUNT(p.product_id) as product_count
@@ -20,7 +21,9 @@ class SupplierDatabaseService {
       GROUP BY s.supplier_id, s.company_name, s.contact_name, s.phone_number, s.email, s.address, s.created_at, s.updated_at
       ORDER BY s.company_name
       LIMIT \$1 OFFSET \$2
-    ''', parameters: [limit, offset]);
+    ''',
+      parameters: [limit, offset],
+    );
 
     return result.map((row) {
       final supplierId = row[0] as int;
@@ -194,7 +197,7 @@ class SupplierDatabaseService {
   Future<void> deleteSupplier(int supplierId) async {
     final conn = await _databaseService.connection;
     await conn.execute(
-      'UPDATE suppliers SET is_active = false WHERE supplier_id = \$1',
+      'delete from suppliers WHERE supplier_id = \$1',
       parameters: [supplierId],
     );
   }

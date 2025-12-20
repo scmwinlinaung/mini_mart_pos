@@ -21,15 +21,40 @@ class CategoryCubit extends Cubit<CategoryState> {
     ]);
   }
 
-  Future<void> loadCategories() async {
+  Future<void> loadCategories({int page = 1}) async {
     try {
       emit(state.copyWith(isLoading: true, clearError: true));
 
       final categories = await _categoryRepository.getAllCategories();
 
+      // Apply search filter if exists
+      var filteredCategories = categories;
+      if (state.searchTerm.isNotEmpty) {
+        filteredCategories = categories.where((category) {
+          return category.name.toLowerCase().contains(state.searchTerm.toLowerCase()) ||
+              (category.description?.toLowerCase().contains(state.searchTerm.toLowerCase()) ?? false);
+        }).toList();
+      }
+
+      // Calculate pagination
+      final itemsPerPage = state.itemsPerPage;
+      final totalItems = filteredCategories.length;
+      final totalPages = (totalItems / itemsPerPage).ceil();
+      final currentPage = page > totalPages ? (totalPages > 0 ? 1 : 0) : page;
+
+      // Get categories for current page
+      final startIndex = (currentPage - 1) * itemsPerPage;
+      final pageCategories = filteredCategories
+          .skip(startIndex)
+          .take(itemsPerPage)
+          .toList();
+
       emit(state.copyWith(
-        categories: categories,
+        categories: pageCategories,
         isLoading: false,
+        currentPage: currentPage,
+        totalPages: totalPages,
+        totalItems: totalItems,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -68,12 +93,9 @@ class CategoryCubit extends Cubit<CategoryState> {
         return;
       }
 
-      final searchResults = await _categoryRepository.searchCategories(searchTerm);
-
-      emit(state.copyWith(
-        categories: searchResults,
-        isSearching: false,
-      ));
+      // Load categories and apply search filter
+      await loadCategories(page: 1);
+      emit(state.copyWith(isSearching: false));
     } catch (e) {
       emit(state.copyWith(
         isSearching: false,
@@ -181,6 +203,40 @@ class CategoryCubit extends Cubit<CategoryState> {
 
   void clearError() {
     emit(state.copyWith(clearError: true));
+  }
+
+  // === PAGINATION METHODS ===
+
+  // Go to specific page
+  Future<void> goToPage(int page) async {
+    if (page < 1 || page > state.totalPages) return;
+
+    await loadCategories(page: page);
+  }
+
+  // Go to next page
+  Future<void> nextPage() async {
+    if (state.currentPage < state.totalPages) {
+      await goToPage(state.currentPage + 1);
+    }
+  }
+
+  // Go to previous page
+  Future<void> previousPage() async {
+    if (state.currentPage > 1) {
+      await goToPage(state.currentPage - 1);
+    }
+  }
+
+  // Change items per page
+  Future<void> changeItemsPerPage(int itemsPerPage) async {
+    if (itemsPerPage <= 0) return;
+
+    emit(state.copyWith(
+      itemsPerPage: itemsPerPage,
+      currentPage: 1, // Reset to first page when changing items per page
+    ));
+    await loadCategories(page: 1);
   }
 
   bool _validateAllFields() {

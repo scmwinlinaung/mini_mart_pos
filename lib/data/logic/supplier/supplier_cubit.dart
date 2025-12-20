@@ -64,7 +64,7 @@ class SupplierCubit extends Cubit<SupplierState> {
     }
   }
 
-  Future<void> searchSuppliers(String searchTerm) async {
+  Future<void> searchSuppliers(String searchTerm, {int? page}) async {
     try {
       emit(state.copyWith(isSearching: true, searchTerm: searchTerm));
 
@@ -74,10 +74,21 @@ class SupplierCubit extends Cubit<SupplierState> {
         return;
       }
 
+      // For search, we'll get all results and update pagination accordingly
       final searchResults = await _supplierRepository.searchSuppliers(searchTerm);
+      final totalCount = searchResults.length;
+      final totalPages = (totalCount / state.pageSize).ceil();
+      final targetPage = page ?? 1;
+
+      // Get current page of search results
+      final startIndex = (targetPage - 1) * state.pageSize;
+      final currentPageResults = searchResults.skip(startIndex).take(state.pageSize).toList();
 
       emit(state.copyWith(
-        suppliers: searchResults,
+        suppliers: currentPageResults,
+        currentPage: targetPage,
+        totalPages: totalPages,
+        totalSuppliersCount: totalCount,
         isSearching: false,
       ));
     } catch (e) {
@@ -338,7 +349,13 @@ class SupplierCubit extends Cubit<SupplierState> {
   // Pagination methods
   Future<void> goToPage(int page) async {
     if (page >= 1 && page <= state.totalPages) {
-      await loadSuppliers(page: page, limit: state.pageSize);
+      if (state.searchTerm.isNotEmpty) {
+        // If we're in search mode, re-run search with new page
+        await searchSuppliers(state.searchTerm, page: page);
+      } else {
+        // Normal pagination
+        await loadSuppliers(page: page, limit: state.pageSize);
+      }
     }
   }
 
@@ -355,6 +372,13 @@ class SupplierCubit extends Cubit<SupplierState> {
   }
 
   Future<void> changePageSize(int newPageSize) async {
-    await loadSuppliers(page: 1, limit: newPageSize);
+    if (state.searchTerm.isNotEmpty) {
+      // If we're in search mode, re-run search with new page size
+      emit(state.copyWith(pageSize: newPageSize, currentPage: 1));
+      await searchSuppliers(state.searchTerm);
+    } else {
+      // Normal pagination
+      await loadSuppliers(page: 1, limit: newPageSize);
+    }
   }
 }

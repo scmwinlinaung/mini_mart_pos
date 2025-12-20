@@ -6,6 +6,7 @@ import '../widgets/desktop_app_bar.dart';
 import '../widgets/desktop_scaffold.dart';
 import '../widgets/language_selector.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/widgets/pagination_controls.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -356,7 +357,7 @@ class UserList extends StatelessWidget {
         Expanded(
           child: BlocBuilder<UserCubit, UserState>(
             builder: (context, state) {
-              if (state.isLoading) {
+              if (state.isLoading && state.users.isEmpty) {
                 return const Center(
                   child: CircularProgressIndicator(),
                 );
@@ -392,30 +393,49 @@ class UserList extends StatelessWidget {
                 );
               }
 
-              return SingleChildScrollView(
-                child: DataTable(
-                  columnSpacing: 16,
-                  columns: [
-                    DataColumn(
-                      label: Text(AppStrings.fullName),
+              return Column(
+                children: [
+                  // Page info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Showing ${((state.currentPage - 1) * state.itemsPerPage) + 1}-${(state.currentPage - 1) * state.itemsPerPage + state.users.length} of ${state.totalItems}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    DataColumn(
-                      label: Text(AppStrings.username),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.email),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.role),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.status),
-                    ),
-                    DataColumn(
-                      label: Text(AppStrings.actions),
-                    ),
-                  ],
-                  rows: state.users.map((user) {
+                  ),
+                  // Table
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columnSpacing: 16,
+                        columns: [
+                          DataColumn(
+                            label: Text(AppStrings.fullName),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.username),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.email),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.role),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.status),
+                          ),
+                          DataColumn(
+                            label: Text(AppStrings.actions),
+                          ),
+                        ],
+                        rows: state.users.map((user) {
                     return DataRow(
                       color: MaterialStateProperty.all(
                         user.isActive ? Colors.white : Colors.grey.shade100,
@@ -513,7 +533,19 @@ class UserList extends StatelessWidget {
                       ],
                     );
                   }).toList(),
-                ),
+                      ),
+                    ),
+                  ),
+                  // Pagination Controls
+                  PaginationControls<UserCubit, UserState>(
+                    cubit: context.read<UserCubit>(),
+                    currentPage: state.currentPage,
+                    totalPages: state.totalPages,
+                    onPageChanged: (page) => context.read<UserCubit>().goToPage(page),
+                    itemsPerPage: state.itemsPerPage,
+                    onItemsPerPageChanged: (itemsPerPage) => context.read<UserCubit>().changeItemsPerPage(itemsPerPage),
+                  ),
+                ],
               );
             },
           ),

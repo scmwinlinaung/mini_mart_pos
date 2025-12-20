@@ -130,16 +130,9 @@ class SupplierState {
   }
 
   List<Supplier> get filteredSuppliers {
-    if (searchTerm.isEmpty) {
-      return suppliers;
-    }
-
-    return suppliers.where((supplier) {
-      return supplier.companyName.toLowerCase().contains(searchTerm.toLowerCase()) ||
-          (supplier.contactName?.toLowerCase().contains(searchTerm.toLowerCase()) ?? false) ||
-          (supplier.email?.toLowerCase().contains(searchTerm.toLowerCase()) ?? false) ||
-          (supplier.phoneNumber?.contains(searchTerm) ?? false);
-    }).toList();
+    // During search, suppliers are already filtered by the searchSuppliers method
+    // So just return the current page of suppliers
+    return suppliers;
   }
 
   // Keep the old getter for backward compatibility in statistics

@@ -21,15 +21,31 @@ class UserCubit extends Cubit<UserState> {
     ]);
   }
 
-  Future<void> loadUsers() async {
+  Future<void> loadUsers({int page = 1}) async {
     try {
       emit(state.copyWith(isLoading: true, clearError: true));
 
       final users = await _userRepository.getAllUsers();
 
+      // Calculate pagination
+      final itemsPerPage = state.itemsPerPage;
+      final totalItems = users.length;
+      final totalPages = (totalItems / itemsPerPage).ceil();
+      final currentPage = page > totalPages ? (totalPages > 0 ? 1 : 0) : page;
+
+      // Get users for current page
+      final startIndex = (currentPage - 1) * itemsPerPage;
+      final pageUsers = users
+          .skip(startIndex)
+          .take(itemsPerPage)
+          .toList();
+
       emit(state.copyWith(
-        users: users,
+        users: pageUsers,
         isLoading: false,
+        currentPage: currentPage,
+        totalPages: totalPages,
+        totalItems: totalItems,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -208,6 +224,40 @@ class UserCubit extends Cubit<UserState> {
 
   void clearError() {
     emit(state.copyWith(clearError: true));
+  }
+
+  // === PAGINATION METHODS ===
+
+  // Go to specific page
+  Future<void> goToPage(int page) async {
+    if (page < 1 || page > state.totalPages) return;
+
+    await loadUsers(page: page);
+  }
+
+  // Go to next page
+  Future<void> nextPage() async {
+    if (state.currentPage < state.totalPages) {
+      await goToPage(state.currentPage + 1);
+    }
+  }
+
+  // Go to previous page
+  Future<void> previousPage() async {
+    if (state.currentPage > 1) {
+      await goToPage(state.currentPage - 1);
+    }
+  }
+
+  // Change items per page
+  Future<void> changeItemsPerPage(int itemsPerPage) async {
+    if (itemsPerPage <= 0) return;
+
+    emit(state.copyWith(
+      itemsPerPage: itemsPerPage,
+      currentPage: 1, // Reset to first page when changing items per page
+    ));
+    await loadUsers(page: 1);
   }
 
   bool _validateAllFields() {

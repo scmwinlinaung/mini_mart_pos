@@ -169,9 +169,8 @@ class CartItem {
     : unitPrice = unitPrice ?? product.sellPrice;
 
   int get total => unitPrice * quantity;
-  double get totalDouble => total / 100.0;
-  String get formattedTotal => '\$${(total / 100).toStringAsFixed(2)}';
-  String get formattedUnitPrice => '\$${(unitPrice / 100).toStringAsFixed(2)}';
+  String get formattedTotal => '\$$total';
+  String get formattedUnitPrice => '\$$unitPrice ';
 
   CartItem copyWith({Product? product, int? quantity, int? unitPrice}) {
     return CartItem(
