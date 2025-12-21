@@ -39,11 +39,21 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   List<Supplier> _suppliers = [];
   List<UnitType> _unitTypes = [];
 
+  // ScaffoldMessenger reference
+  ScaffoldMessengerState? _scaffoldMessenger;
+
   @override
   void initState() {
     super.initState();
     _initializeControllers();
     _loadLookupData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Safely store reference to ScaffoldMessenger
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   void _initializeControllers() {
@@ -874,23 +884,29 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
 
     // Validate dropdown selections
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
+      if (_scaffoldMessenger != null) {
+        _scaffoldMessenger!.showSnackBar(
+          const SnackBar(content: Text('Please select a category')),
+        );
+      }
       return;
     }
 
     if (_selectedSupplierId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a supplier')));
+      if (_scaffoldMessenger != null) {
+        _scaffoldMessenger!.showSnackBar(
+          const SnackBar(content: Text('Please select a supplier')),
+        );
+      }
       return;
     }
 
     if (_selectedUnitTypeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a unit type')),
-      );
+      if (_scaffoldMessenger != null) {
+        _scaffoldMessenger!.showSnackBar(
+          const SnackBar(content: Text('Please select a unit type')),
+        );
+      }
       return;
     }
 
@@ -913,25 +929,25 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           cubit.state.selectedProduct!.productId,
           productData,
         );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted && _scaffoldMessenger != null) {
+          _scaffoldMessenger!.showSnackBar(
             const SnackBar(content: Text('Product updated successfully')),
           );
         }
       } else {
         await cubit.addProduct(productData);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted && _scaffoldMessenger != null) {
+          _scaffoldMessenger!.showSnackBar(
             const SnackBar(content: Text('Product added successfully')),
           );
         }
       }
       // cubit.clearSelection();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      if (mounted && _scaffoldMessenger != null) {
+        _scaffoldMessenger!.showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
       }
     }
   }

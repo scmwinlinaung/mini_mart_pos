@@ -245,7 +245,7 @@ class _PosScreenState extends State<PosScreen> {
                           ),
                           TableColumnConfig<CartItem>(
                             headerKey: 'Price',
-                            width: 80,
+                            width: 150,
                             isFixed: true,
                             alignment: Alignment.center,
                             cellBuilder: (item, index) => Text(
@@ -258,7 +258,7 @@ class _PosScreenState extends State<PosScreen> {
                           ),
                           TableColumnConfig<CartItem>(
                             headerKey: 'Total',
-                            width: 80,
+                            width: 150,
                             isFixed: true,
                             alignment: Alignment.center,
                             cellBuilder: (item, index) => Text(
@@ -424,9 +424,15 @@ class _PosScreenState extends State<PosScreen> {
                                   ),
                                 )
                               : const Icon(Icons.attach_money),
-                          label: const Text("CASH PAYMENT"),
+                          label: Text(
+                            state.items.isEmpty
+                                ? "ADD ITEMS FIRST"
+                                : "CASH PAYMENT",
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: state.items.isEmpty
+                                ? Colors.grey.shade400
+                                : Colors.green,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -436,7 +442,10 @@ class _PosScreenState extends State<PosScreen> {
                               state.status == CartStatus.processing ||
                                   state.items.isEmpty
                               ? null
-                              : () => _handleCheckout(context, 'CASH'),
+                              : () {
+                                  print('CASH button pressed');
+                                  _handleCheckout(context, 'CASH');
+                                },
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -445,9 +454,15 @@ class _PosScreenState extends State<PosScreen> {
                         height: 50,
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.credit_card),
-                          label: const Text("CARD PAYMENT"),
+                          label: Text(
+                            state.items.isEmpty
+                                ? "ADD ITEMS FIRST"
+                                : "CARD PAYMENT",
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: state.items.isEmpty
+                                ? Colors.grey.shade400
+                                : Colors.blue,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -457,7 +472,10 @@ class _PosScreenState extends State<PosScreen> {
                               state.status == CartStatus.processing ||
                                   state.items.isEmpty
                               ? null
-                              : () => _handleCheckout(context, 'CARD'),
+                              : () {
+                                  print('CARD button pressed');
+                                  _handleCheckout(context, 'CARD');
+                                },
                         ),
                       ),
                     ],
