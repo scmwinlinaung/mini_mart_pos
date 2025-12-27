@@ -2,11 +2,15 @@ import 'package:mini_mart_pos/data/models/product.dart';
 import 'package:mini_mart_pos/data/models/dashboard.dart';
 import 'package:postgres/postgres.dart';
 import 'package:mini_mart_pos/core/services/database_service.dart';
+import 'package:mini_mart_pos/core/services/invoice_service.dart';
 
 class PosRepository {
   final DatabaseService _dbService;
+  late final InvoiceService _invoiceService;
 
-  PosRepository(this._dbService);
+  PosRepository(this._dbService) {
+    _invoiceService = InvoiceService(_dbService);
+  }
 
   // Find product by barcode
   Future<Product?> getProduct(String barcode) async {
@@ -24,32 +28,36 @@ class PosRepository {
   Future<void> submitSale(List<CartItem> items, int total, int userId) async {
     final conn = await _dbService.connection;
 
+    // Generate sequential invoice number
+    final invoice = await _invoiceService.generateNextInvoiceNumber();
+
     await conn.runTx((ctx) async {
-      final invoice = 'INV-${DateTime.now().millisecondsSinceEpoch}';
-
-      // 1. Insert Header
-      final saleRes = await ctx.execute(
-        Sql.named('''
-          INSERT INTO sales (invoice_no, user_id, sub_total, grand_total, payment_method)
-          VALUES (@inv, @uid, @tot, @tot, 'CASH') RETURNING sale_id
-        '''),
-        parameters: {'inv': invoice, 'uid': userId, 'tot': total},
-      );
-      final saleId = saleRes.first[0] as int;
-
-      // 2. Insert Items (Trigger handles stock deduction)
+      // Insert each cart item as a separate row in the sales table
+      // (Schema stores line items directly, not a header-items pattern)
       for (var item in items) {
         await ctx.execute(
           Sql.named('''
-            INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price)
-            VALUES (@sid, @pid, @qty, @price, @total)
+            INSERT INTO sales (
+              invoice_no, user_id, product_id, unit_type_id, barcode, product_name,
+              quantity, unit_price, total_price, tax_amount, discount_amount,
+              sub_total, grand_total, payment_method, payment_status
+            )
+            VALUES (
+              @inv, @uid, @pid, @utid, @barcode, @pname,
+              @qty, @uprice, @tprice, 0, 0,
+              @tprice, @tprice, 'CASH', 'PAID'
+            )
           '''),
           parameters: {
-            'sid': saleId,
+            'inv': invoice,
+            'uid': userId,
             'pid': item.product.productId,
+            'utid': item.product.unitTypeId,
+            'barcode': item.product.barcode,
+            'pname': item.product.productName,
             'qty': item.quantity,
-            'price': item.product.sellPrice,
-            'total': item.total,
+            'uprice': item.unitPrice,
+            'tprice': item.total,
           },
         );
       }
@@ -64,13 +72,13 @@ class PosRepository {
     final summaryResult = await conn.execute('''
       SELECT
         COALESCE(SUM(s.grand_total), 0) as total_revenue,
-        COALESCE(SUM(si.total_price * si.quantity), 0) as total_cost,
+        COALESCE(SUM(p.cost_price * s.quantity), 0) as total_cost,
         (SELECT COALESCE(SUM(amount), 0) FROM expenses) as total_expenses,
-        COUNT(DISTINCT s.sale_id) as total_sales,
+        COUNT(DISTINCT s.invoice_no) as total_sales,
         (SELECT COUNT(*) FROM products WHERE is_active = true) as total_products,
         (SELECT COUNT(*) FROM products WHERE stock_quantity <= reorder_level AND is_active = true) as low_stock_products
       FROM sales s
-      LEFT JOIN sale_items si ON s.sale_id = si.sale_id
+      LEFT JOIN products p ON s.product_id = p.product_id
       WHERE s.created_at >= DATE_TRUNC('year', CURRENT_DATE)
     ''');
 
@@ -82,7 +90,7 @@ class PosRepository {
         COALESCE(SUM(grand_total), 0) as revenue,
         0 as expenses,
         COALESCE(SUM(grand_total), 0) as profit,
-        COUNT(sale_id) as sales_count
+        COUNT(DISTINCT invoice_no) as sales_count
       FROM sales
       WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE)
       GROUP BY DATE_TRUNC('month', created_at), TO_CHAR(DATE_TRUNC('month', created_at), 'Mon'), EXTRACT(MONTH FROM created_at)
@@ -96,7 +104,7 @@ class PosRepository {
         COALESCE(SUM(grand_total), 0) as revenue,
         0 as expenses,
         COALESCE(SUM(grand_total), 0) as profit,
-        COUNT(sale_id) as sales_count
+        COUNT(DISTINCT invoice_no) as sales_count
       FROM sales
       WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE - INTERVAL '5 years')
       GROUP BY EXTRACT(YEAR FROM created_at)

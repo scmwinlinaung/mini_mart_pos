@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/inventory_repository.dart';
-import '../../data/repositories/auth_repository.dart';
 import '../../data/models/product.dart';
 import '../../data/logic/auth/auth_cubit.dart';
 
 class InventoryManagementScreen extends StatefulWidget {
-  const InventoryManagementScreen({Key? key}) : super(key: key);
+  const InventoryManagementScreen({super.key});
 
   @override
   State<InventoryManagementScreen> createState() =>
@@ -17,7 +16,6 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late InventoryRepository _inventoryRepository;
-  late AuthRepository _authRepository;
 
   List<Product> _allProducts = [];
   List<Product> _lowStockProducts = [];
@@ -33,7 +31,6 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _inventoryRepository = InventoryRepository();
-    _authRepository = AuthRepository();
     _loadInventoryData();
   }
 

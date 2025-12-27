@@ -41,13 +41,15 @@ class CartCubit extends Cubit<CartState> {
   final PosRepository _repo;
 
   CartCubit(this._repo, [CartState? initialState])
-      : super(initialState ?? const CartState());
+    : super(initialState ?? const CartState());
 
   void addProduct(Product product) {
     final List<CartItem> currentItems = List.from(state.items);
 
     // Check if exists
-    final index = currentItems.indexWhere((i) => i.product.productId == product.productId);
+    final index = currentItems.indexWhere(
+      (i) => i.product.productId == product.productId,
+    );
 
     if (index >= 0) {
       final existing = currentItems[index];
@@ -56,7 +58,13 @@ class CartCubit extends Cubit<CartState> {
       currentItems.add(CartItem(product: product, quantity: 1));
     }
 
-    emit(state.copyWith(items: currentItems, status: CartStatus.initial));
+    emit(
+      state.copyWith(
+        items: currentItems,
+        status: CartStatus.initial,
+        errorMessage: null,
+      ),
+    );
   }
 
   void updateQuantity(int productId, int quantity) {
@@ -66,22 +74,40 @@ class CartCubit extends Cubit<CartState> {
     }
 
     final List<CartItem> currentItems = List.from(state.items);
-    final index = currentItems.indexWhere((i) => i.product.productId == productId);
+    final index = currentItems.indexWhere(
+      (i) => i.product.productId == productId,
+    );
 
     if (index >= 0) {
       currentItems[index] = currentItems[index].copyWith(quantity: quantity);
-      emit(state.copyWith(items: currentItems));
+      emit(
+        state.copyWith(
+          items: currentItems,
+          status: CartStatus.initial,
+          errorMessage: null,
+        ),
+      );
     }
   }
 
   void removeItem(int productId) {
     final List<CartItem> currentItems = List.from(state.items)
       ..removeWhere((item) => item.product.productId == productId);
-    emit(state.copyWith(items: currentItems));
+    emit(
+      state.copyWith(
+        items: currentItems,
+        status: CartStatus.initial,
+        errorMessage: null,
+      ),
+    );
   }
 
   void clearCart() {
     emit(const CartState());
+  }
+
+  void resetStatus() {
+    emit(state.copyWith(status: CartStatus.initial, errorMessage: null));
   }
 
   Future<void> checkout(int userId) async {
@@ -95,6 +121,7 @@ class CartCubit extends Cubit<CartState> {
         const CartState(items: [], status: CartStatus.success),
       ); // Clear cart
     } catch (e) {
+      print("Error during checkout: $e");
       emit(
         state.copyWith(status: CartStatus.failure, errorMessage: e.toString()),
       );

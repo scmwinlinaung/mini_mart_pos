@@ -7,6 +7,7 @@ class SalesDatabaseService {
   SalesDatabaseService(this._dbService);
 
   // Create new sale with items
+  // Note: Schema stores each sale line item directly in the sales table
   Future<int> createSale({
     required String invoiceNo,
     required int userId,
@@ -21,52 +22,52 @@ class SalesDatabaseService {
     final conn = await _dbService.connection;
 
     return await conn.runTx((txn) async {
-      // Create sale record
-      final saleResult = await txn.execute(
-        Sql.named('''
-        INSERT INTO sales (
-          invoice_no, user_id, customer_id, sub_total, tax_amount,
-          discount_amount, grand_total, payment_method, payment_status
-        ) VALUES (
-          @invoice_no, @user_id, @customer_id, @sub_total, @tax_amount,
-          @discount_amount, @grand_total, @payment_method, 'PAID'
-        ) RETURNING sale_id
-      '''),
-        parameters: {
-          'invoice_no': invoiceNo,
-          'user_id': userId,
-          'customer_id': customerId,
-          'sub_total': subTotal,
-          'tax_amount': taxAmount,
-          'discount_amount': discountAmount,
-          'grand_total': grandTotal,
-          'payment_method': paymentMethod,
-        },
-      );
+      // Insert each sale item as a separate row in the sales table
+      int firstSaleId = 0;
 
-      final saleId = saleResult.first[0] as int;
-
-      // Create sale items
       for (final item in saleItems) {
-        await txn.execute(
+        final saleResult = await txn.execute(
           Sql.named('''
-          INSERT INTO sale_items (
-            sale_id, product_id, quantity, unit_price, total_price
+          INSERT INTO sales (
+            invoice_no, user_id, customer_id,
+            product_id, unit_type_id, barcode, product_name,
+            quantity, unit_price, total_price,
+            tax_amount, discount_amount, sub_total, grand_total,
+            payment_method, payment_status
           ) VALUES (
-            @sale_id, @product_id, @quantity, @unit_price, @total_price
-          )
+            @invoice_no, @user_id, @customer_id,
+            @product_id, @unit_type_id, @barcode, @product_name,
+            @quantity, @unit_price, @total_price,
+            @tax_amount, @discount_amount, @sub_total, @grand_total,
+            @payment_method, 'PAID'
+          ) RETURNING sale_id
         '''),
           parameters: {
-            'sale_id': saleId,
+            'invoice_no': invoiceNo,
+            'user_id': userId,
+            'customer_id': customerId,
             'product_id': item['product_id'],
+            'unit_type_id': item['unit_type_id'],
+            'barcode': item['barcode'],
+            'product_name': item['product_name'],
             'quantity': item['quantity'],
             'unit_price': item['unit_price'],
             'total_price': item['total_price'],
+            'tax_amount': taxAmount,
+            'discount_amount': discountAmount,
+            'sub_total': subTotal,
+            'grand_total': grandTotal,
+            'payment_method': paymentMethod,
           },
         );
+
+        // Store the first sale_id
+        if (firstSaleId == 0) {
+          firstSaleId = saleResult.first[0] as int;
+        }
       }
 
-      return saleId;
+      return firstSaleId;
     });
   }
 
@@ -104,26 +105,26 @@ class SalesDatabaseService {
     return result.map((row) => row.toColumnMap()).toList();
   }
 
-  // Get sale items for a specific sale
-  Future<List<Map<String, dynamic>>> getSaleItems(int saleId) async {
+  // Get sale items for a specific invoice
+  Future<List<Map<String, dynamic>>> getSaleItemsByInvoice(String invoiceNo) async {
     final conn = await _dbService.connection;
     final result = await conn.execute(
       Sql.named('''
       SELECT
-        si.sale_item_id,
-        si.sale_id,
-        si.product_id,
-        p.product_name,
-        p.barcode,
-        si.quantity,
-        si.unit_price,
-        si.total_price
-      FROM sale_items si
-      JOIN products p ON si.product_id = p.product_id
-      WHERE si.sale_id = @sale_id
-      ORDER BY si.sale_item_id
+        s.sale_id,
+        s.invoice_no,
+        s.product_id,
+        s.product_name,
+        s.barcode,
+        s.quantity,
+        s.unit_price,
+        s.total_price,
+        s.grand_total
+      FROM sales s
+      WHERE s.invoice_no = @invoice_no
+      ORDER BY s.sale_id
     '''),
-      parameters: {'sale_id': saleId},
+      parameters: {'invoice_no': invoiceNo},
     );
 
     return result.map((row) => row.toColumnMap()).toList();
@@ -135,14 +136,13 @@ class SalesDatabaseService {
     final result = await conn.execute(
       Sql.named('''
       SELECT
-        COUNT(*) as total_sales,
+        COUNT(DISTINCT s.invoice_no) as total_sales,
         COUNT(DISTINCT s.user_id) as number_of_cashiers,
         SUM(s.grand_total) as total_revenue,
         AVG(s.grand_total) as average_sale_value,
         SUM(s.discount_amount) as total_discounts,
-        SUM(si.quantity) as total_items_sold
+        SUM(s.quantity) as total_items_sold
       FROM sales s
-      JOIN sale_items si ON s.sale_id = si.sale_id
       WHERE s.created_at >= @start_date AND s.created_at <= @end_date
     '''),
       parameters: {
@@ -169,17 +169,15 @@ class SalesDatabaseService {
     final result = await conn.execute(
       Sql.named('''
       SELECT
-        p.product_id,
-        p.product_name,
-        p.barcode,
-        SUM(si.quantity) as total_quantity_sold,
-        SUM(si.total_price) as total_revenue,
-        COUNT(DISTINCT s.sale_id) as number_of_transactions
-      FROM sale_items si
-      JOIN sales s ON si.sale_id = s.sale_id
-      JOIN products p ON si.product_id = p.product_id
+        s.product_id,
+        s.product_name,
+        s.barcode,
+        SUM(s.quantity) as total_quantity_sold,
+        SUM(s.total_price) as total_revenue,
+        COUNT(DISTINCT s.invoice_no) as number_of_transactions
+      FROM sales s
       WHERE s.created_at >= @start_date AND s.created_at <= @end_date
-      GROUP BY p.product_id, p.product_name, p.barcode
+      GROUP BY s.product_id, s.product_name, s.barcode
       ORDER BY total_quantity_sold DESC
       LIMIT @limit
     '''),

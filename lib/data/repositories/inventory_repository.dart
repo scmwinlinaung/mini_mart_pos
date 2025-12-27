@@ -1,4 +1,3 @@
-import 'package:postgres/postgres.dart';
 import '../../core/services/database_service.dart';
 import '../services/inventory_database_service.dart';
 import '../models/product.dart';
@@ -39,7 +38,6 @@ class InventoryRepository {
           .map((row) => Product.fromMap(row as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Error getting all products: $e');
       return [];
     }
   }

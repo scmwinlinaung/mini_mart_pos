@@ -78,6 +78,8 @@ class _PosScreenState extends State<PosScreen> {
                     duration: Duration(seconds: 3),
                   ),
                 );
+                // Reset status after showing success message
+                context.read<CartCubit>().resetStatus();
               } else if (state.status == CartStatus.failure) {
                 showDialog(
                   context: context,
@@ -88,7 +90,11 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Reset status after closing error dialog
+                          context.read<CartCubit>().resetStatus();
+                        },
                         child: const Text("OK"),
                       ),
                     ],
@@ -443,7 +449,6 @@ class _PosScreenState extends State<PosScreen> {
                                   state.items.isEmpty
                               ? null
                               : () {
-                                  print('CASH button pressed');
                                   _handleCheckout(context, 'CASH');
                                 },
                         ),

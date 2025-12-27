@@ -4,6 +4,7 @@ import '../../data/repositories/inventory_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/models/product.dart';
 import '../../data/logic/auth/auth_cubit.dart';
+import '../../core/widgets/paginated_table.dart';
 
 class InventoryManagementScreen extends StatefulWidget {
   const InventoryManagementScreen({Key? key}) : super(key: key);
@@ -122,14 +123,17 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
         _isLoadingMore = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading products: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading products: $e')));
       }
     }
   }
 
-  Future<void> _loadLowStockProducts({int page = 1, bool isLoadMore = false}) async {
+  Future<void> _loadLowStockProducts({
+    int page = 1,
+    bool isLoadMore = false,
+  }) async {
     if (isLoadMore) {
       setState(() {
         _isLoadingMore = true;
@@ -165,7 +169,10 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     }
   }
 
-  Future<void> _loadOutOfStockProducts({int page = 1, bool isLoadMore = false}) async {
+  Future<void> _loadOutOfStockProducts({
+    int page = 1,
+    bool isLoadMore = false,
+  }) async {
     if (isLoadMore) {
       setState(() {
         _isLoadingMore = true;
@@ -201,7 +208,11 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     }
   }
 
-  Future<void> _searchProducts(String query, {int page = 1, bool isLoadMore = false}) async {
+  Future<void> _searchProducts(
+    String query, {
+    int page = 1,
+    bool isLoadMore = false,
+  }) async {
     if (query.isEmpty) {
       setState(() {
         _isSearching = false;
@@ -238,9 +249,9 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching products: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error searching products: $e')));
       }
     }
   }
@@ -506,131 +517,6 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     );
   }
 
-  Widget _buildPaginatedProductList({
-    required List<Product> products,
-    required int totalCount,
-    required int currentPage,
-    required int totalPages,
-    required VoidCallback onLoadMore,
-    required bool isLoadingMore,
-  }) {
-    if (_isLoading && currentPage == 1) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (products.isEmpty && !_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No products found', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        // Product count and pagination info
-        if (products.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey[100],
-            child: Row(
-              children: [
-                Text(
-                  'Showing ${products.length} of $totalCount products',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                if (totalPages > 1) ...[
-                  const Spacer(),
-                  Text(
-                    'Page $currentPage of $totalPages',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-        // Product list
-        Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification scrollInfo) {
-              if (scrollInfo is ScrollEndNotification &&
-                  scrollInfo.metrics.extentAfter == 0 &&
-                  currentPage < totalPages &&
-                  !isLoadingMore) {
-                onLoadMore();
-                return true;
-              }
-              return false;
-            },
-            child: ListView.builder(
-              itemCount: products.length + (isLoadingMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == products.length && isLoadingMore) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                final product = products[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: product.isOutOfStock
-                          ? Colors.red
-                          : product.isLowStock
-                          ? Colors.orange
-                          : Colors.green,
-                      child: Text(
-                        '${product.stockQuantity}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    title: Text(product.productName),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Barcode: ${product.barcode}'),
-                        if (product.categoryName != null)
-                          Text('Category: ${product.categoryName}'),
-                        Text('Price: ${product.sellPrice}'),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.history),
-                          onPressed: () => _showStockHistory(product),
-                          tooltip: 'Stock History',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _showStockAdjustmentDialog(product),
-                          tooltip: 'Adjust Stock',
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -773,80 +659,383 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
   }
 
   Widget _buildAllProductsTab() {
-    if (!_isSearching) {
-      return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search products by name or barcode...',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
+    final products = _isSearching ? _searchResults : _allProducts;
+    final currentPage = _isSearching ? _currentPageSearch : _currentPageAll;
+    final totalPages = _isSearching ? _totalPagesSearch : _totalPagesAll;
+    final totalItems = _isSearching ? _totalSearch : _totalAll;
+
+    if (_isLoading && currentPage == 1) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search products by name or barcode...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _isSearching = false;
+                          _searchResults.clear();
+                        });
+                      },
+                    )
+                  : null,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              if (value.isNotEmpty) {
+                _searchProducts(value);
+              } else {
+                setState(() {
+                  _isSearching = false;
+                  _searchResults.clear();
+                });
+              }
+            },
+          ),
+        ),
+        Expanded(
+          child: PaginatedTable<Product>(
+            data: products,
+            columns: [
+              TableColumnConfig<Product>(
+                headerKey: 'Barcode',
+                headerText: 'Barcode',
+                cellBuilder: (product, index) =>
+                    Text(product.barcode, style: const TextStyle(fontSize: 12)),
+                minWidth: 100,
               ),
-              onChanged: (value) {
-                if (value.isNotEmpty) {
-                  _searchProducts(value);
+              TableColumnConfig<Product>(
+                headerKey: 'Product Name',
+                headerText: 'Product Name',
+                cellBuilder: (product, index) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      product.productName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    if (product.categoryName != null)
+                      Text(
+                        'Category: ${product.categoryName}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                  ],
+                ),
+                minWidth: 200,
+              ),
+              TableColumnConfig<Product>(
+                headerKey: 'Price',
+                headerText: 'Price',
+                cellBuilder: (product, index) => Text(
+                  '${product.sellPrice}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                minWidth: 80,
+                alignment: Alignment.center,
+              ),
+              TableColumnConfig<Product>(
+                headerKey: 'Stock',
+                headerText: 'Stock',
+                cellBuilder: (product, index) => Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: product.isOutOfStock
+                          ? Colors.red
+                          : product.isLowStock
+                          ? Colors.orange
+                          : Colors.green,
+                      child: Text(
+                        '${product.stockQuantity}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      product.isOutOfStock
+                          ? 'Out of Stock'
+                          : product.isLowStock
+                          ? 'Low Stock'
+                          : 'In Stock',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: product.isOutOfStock
+                            ? Colors.red
+                            : product.isLowStock
+                            ? Colors.orange
+                            : Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                minWidth: 120,
+              ),
+            ],
+            actions: [
+              ActionConfig<Product>(
+                icon: Icons.history,
+                tooltipText: 'Stock History',
+                onPressed: (product) => _showStockHistory(product),
+                color: Colors.blue,
+              ),
+              ActionConfig<Product>(
+                icon: Icons.edit,
+                tooltipText: 'Adjust Stock',
+                onPressed: (product) => _showStockAdjustmentDialog(product),
+                color: Colors.green,
+              ),
+            ],
+            pagination: PaginationConfig(
+              currentPage: currentPage,
+              totalPages: totalPages,
+              totalItems: totalItems,
+              itemsPerPage: _pageSize,
+              onPageChanged: (page) {
+                if (_isSearching) {
+                  _searchProducts(_searchController.text, page: page);
+                } else {
+                  _loadAllProducts(page: page);
                 }
               },
             ),
-          ),
-          Expanded(
-            child: _buildPaginatedProductList(
-              products: _allProducts,
-              totalCount: _totalAll,
-              currentPage: _currentPageAll,
-              totalPages: _totalPagesAll,
-              onLoadMore: () => _loadAllProducts(
-                page: _currentPageAll + 1,
-                isLoadMore: true,
-              ),
-              isLoadingMore: _isLoadingMore,
+            emptyMessage: 'No products found',
+            emptyIcon: const Icon(
+              Icons.inventory_2_outlined,
+              size: 64,
+              color: Colors.grey,
             ),
           ),
-        ],
-      );
-    }
-
-    return _buildPaginatedProductList(
-      products: _searchResults,
-      totalCount: _totalSearch,
-      currentPage: _currentPageSearch,
-      totalPages: _totalPagesSearch,
-      onLoadMore: () => _searchProducts(
-        _searchController.text,
-        page: _currentPageSearch + 1,
-        isLoadMore: true,
-      ),
-      isLoadingMore: _isLoadingMore,
+        ),
+      ],
     );
   }
 
   Widget _buildLowStockTab() {
-    return _buildPaginatedProductList(
-      products: _lowStockProducts,
-      totalCount: _totalLowStock,
-      currentPage: _currentPageLowStock,
-      totalPages: _totalPagesLowStock,
-      onLoadMore: () => _loadLowStockProducts(
-        page: _currentPageLowStock + 1,
-        isLoadMore: true,
+    if (_isLoading && _currentPageLowStock == 1) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return PaginatedTable<Product>(
+      data: _lowStockProducts,
+      columns: [
+        TableColumnConfig<Product>(
+          headerKey: 'Barcode',
+          headerText: 'Barcode',
+          cellBuilder: (product, index) =>
+              Text(product.barcode, style: const TextStyle(fontSize: 12)),
+          minWidth: 100,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Product Name',
+          headerText: 'Product Name',
+          cellBuilder: (product, index) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                product.productName,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              if (product.categoryName != null)
+                Text(
+                  'Category: ${product.categoryName}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+            ],
+          ),
+          minWidth: 200,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Price',
+          headerText: 'Price',
+          cellBuilder: (product, index) => Text(
+            '${product.sellPrice}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          minWidth: 80,
+          alignment: Alignment.center,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Stock',
+          headerText: 'Stock',
+          cellBuilder: (product, index) => Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.orange,
+                child: Text(
+                  '${product.stockQuantity}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Low Stock',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          minWidth: 120,
+        ),
+      ],
+      actions: [
+        ActionConfig<Product>(
+          icon: Icons.history,
+          tooltipText: 'Stock History',
+          onPressed: (product) => _showStockHistory(product),
+          color: Colors.blue,
+        ),
+        ActionConfig<Product>(
+          icon: Icons.edit,
+          tooltipText: 'Adjust Stock',
+          onPressed: (product) => _showStockAdjustmentDialog(product),
+          color: Colors.green,
+        ),
+      ],
+      pagination: PaginationConfig(
+        currentPage: _currentPageLowStock,
+        totalPages: _totalPagesLowStock,
+        totalItems: _totalLowStock,
+        itemsPerPage: _pageSize,
+        onPageChanged: (page) {
+          _loadLowStockProducts(page: page);
+        },
       ),
-      isLoadingMore: _isLoadingMore,
+      emptyMessage: 'No low stock products found',
+      emptyIcon: const Icon(
+        Icons.warning,
+        size: 64,
+        color: Colors.grey,
+      ),
     );
   }
 
   Widget _buildOutOfStockTab() {
-    return _buildPaginatedProductList(
-      products: _outOfStockProducts,
-      totalCount: _totalOutOfStock,
-      currentPage: _currentPageOutOfStock,
-      totalPages: _totalPagesOutOfStock,
-      onLoadMore: () => _loadOutOfStockProducts(
-        page: _currentPageOutOfStock + 1,
-        isLoadMore: true,
+    if (_isLoading && _currentPageOutOfStock == 1) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return PaginatedTable<Product>(
+      data: _outOfStockProducts,
+      columns: [
+        TableColumnConfig<Product>(
+          headerKey: 'Barcode',
+          headerText: 'Barcode',
+          cellBuilder: (product, index) =>
+              Text(product.barcode, style: const TextStyle(fontSize: 12)),
+          minWidth: 100,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Product Name',
+          headerText: 'Product Name',
+          cellBuilder: (product, index) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                product.productName,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              if (product.categoryName != null)
+                Text(
+                  'Category: ${product.categoryName}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+            ],
+          ),
+          minWidth: 200,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Price',
+          headerText: 'Price',
+          cellBuilder: (product, index) => Text(
+            '${product.sellPrice}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          minWidth: 80,
+          alignment: Alignment.center,
+        ),
+        TableColumnConfig<Product>(
+          headerKey: 'Stock',
+          headerText: 'Stock',
+          cellBuilder: (product, index) => Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.red,
+                child: Text(
+                  '${product.stockQuantity}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Out of Stock',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          minWidth: 120,
+        ),
+      ],
+      actions: [
+        ActionConfig<Product>(
+          icon: Icons.history,
+          tooltipText: 'Stock History',
+          onPressed: (product) => _showStockHistory(product),
+          color: Colors.blue,
+        ),
+        ActionConfig<Product>(
+          icon: Icons.edit,
+          tooltipText: 'Adjust Stock',
+          onPressed: (product) => _showStockAdjustmentDialog(product),
+          color: Colors.green,
+        ),
+      ],
+      pagination: PaginationConfig(
+        currentPage: _currentPageOutOfStock,
+        totalPages: _totalPagesOutOfStock,
+        totalItems: _totalOutOfStock,
+        itemsPerPage: _pageSize,
+        onPageChanged: (page) {
+          _loadOutOfStockProducts(page: page);
+        },
       ),
-      isLoadingMore: _isLoadingMore,
+      emptyMessage: 'No out of stock products found',
+      emptyIcon: const Icon(
+        Icons.error,
+        size: 64,
+        color: Colors.grey,
+      ),
     );
   }
 }
