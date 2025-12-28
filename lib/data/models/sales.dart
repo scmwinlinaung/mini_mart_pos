@@ -62,10 +62,10 @@ class Sale {
   final String? userName;
   final int? customerId;
   final String? customerName;
-  final int subTotal; // in cents
-  final int taxAmount; // in cents
-  final int discountAmount; // in cents
-  final int grandTotal; // in cents
+  final double subTotal;
+  final double taxAmount;
+  final double discountAmount;
+  final double grandTotal;
   final String? paymentMethod;
   final String? paymentStatus;
   final DateTime createdAt;
@@ -78,8 +78,8 @@ class Sale {
     this.customerId,
     this.customerName,
     required this.subTotal,
-    this.taxAmount = 0,
-    this.discountAmount = 0,
+    this.taxAmount = 0.0,
+    this.discountAmount = 0.0,
     required this.grandTotal,
     this.paymentMethod,
     this.paymentStatus = 'PAID',
@@ -94,10 +94,10 @@ class Sale {
       userName: map['user_name'] as String?,
       customerId: map['customer_id'] as int?,
       customerName: map['customer_name'] as String?,
-      subTotal: map['sub_total'] as int,
-      taxAmount: map['tax_amount'] as int? ?? 0,
-      discountAmount: map['discount_amount'] as int? ?? 0,
-      grandTotal: map['grand_total'] as int,
+      subTotal: (map['sub_total'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (map['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      discountAmount: (map['discount_amount'] as num?)?.toDouble() ?? 0.0,
+      grandTotal: (map['grand_total'] as num).toDouble(),
       paymentMethod: map['payment_method'] as String?,
       paymentStatus: map['payment_status'] as String? ?? 'PAID',
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -123,15 +123,10 @@ class Sale {
   }
 
   // Helper getters for UI
-  double get subTotalDouble => subTotal / 100.0;
-  double get taxAmountDouble => taxAmount / 100.0;
-  double get discountAmountDouble => discountAmount / 100.0;
-  double get grandTotalDouble => grandTotal / 100.0;
-
-  String get formattedSubTotal => '\$${(subTotal / 100).toStringAsFixed(2)}';
-  String get formattedTaxAmount => '\$${(taxAmount / 100).toStringAsFixed(2)}';
-  String get formattedDiscountAmount => '\$${(discountAmount / 100).toStringAsFixed(2)}';
-  String get formattedGrandTotal => '\$${(grandTotal / 100).toStringAsFixed(2)}';
+  String get formattedSubTotal => '\$${subTotal.toStringAsFixed(2)}';
+  String get formattedTaxAmount => '\$${taxAmount.toStringAsFixed(2)}';
+  String get formattedDiscountAmount => '\$${discountAmount.toStringAsFixed(2)}';
+  String get formattedGrandTotal => '\$${grandTotal.toStringAsFixed(2)}';
 
   @override
   bool operator ==(Object other) =>

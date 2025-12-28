@@ -17,7 +17,7 @@ class CartState extends Equatable {
     this.errorMessage,
   });
 
-  int get grandTotal => items.fold(0, (sum, item) => sum + item.total);
+  double get grandTotal => items.fold(0, (sum, item) => sum + item.total);
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
   CartState copyWith({
@@ -129,6 +129,6 @@ class CartCubit extends Cubit<CartState> {
   }
 
   int get itemCount => state.items.fold(0, (sum, item) => sum + item.quantity);
-  int get grandTotal => state.grandTotal;
-  String get formattedTotal => '\$${(grandTotal / 100).toStringAsFixed(2)}';
+  double get grandTotal => state.grandTotal;
+  String get formattedTotal => '\$${grandTotal}';
 }

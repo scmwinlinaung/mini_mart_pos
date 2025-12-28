@@ -68,8 +68,8 @@ CREATE TABLE products (
     description TEXT,
 
     -- MONEY AS INT: Stored in cents/smallest unit
-    cost_price INT DEFAULT 0,
-    sell_price INT NOT NULL,
+    cost_price FLOAT DEFAULT 0.0,
+    sell_price FLOAT NOT NULL,
 
     -- INVENTORY TRACKING
     stock_quantity INT DEFAULT 0,
@@ -109,14 +109,14 @@ CREATE TABLE sales (
     quantity INT NOT NULL DEFAULT 1,
 
     -- SNAPSHOT PRICES: Store price at moment of sale (in case product price changes later)
-    unit_price INT NOT NULL, -- Individual unit price
-    total_price INT NOT NULL, -- (quantity * unit_price)
+    unit_price FLOAT NOT NULL, -- Individual unit price
+    total_price FLOAT NOT NULL, -- (quantity * unit_price)
 
     -- MONEY CALCULATIONS
-    tax_amount INT DEFAULT 0,
-    discount_amount INT DEFAULT 0,
-    sub_total INT DEFAULT 0,
-    grand_total INT NOT NULL, -- (total_price + tax_amount - discount_amount)
+    tax_amount FLOAT DEFAULT 0.0,
+    discount_amount FLOAT DEFAULT 0.0,
+    sub_total FLOAT DEFAULT 0.0,
+    grand_total FLOAT NOT NULL, -- (total_price + tax_amount - discount_amount)
 
     payment_method TEXT CHECK (payment_method IN ('CASH', 'CARD', 'QR', 'CREDIT')),
     payment_status TEXT DEFAULT 'PAID' CHECK (payment_status IN ('PAID', 'PENDING', 'REFUNDED')),
@@ -148,7 +148,7 @@ CREATE TABLE purchases (
     user_id INT REFERENCES users(user_id),
 
     supplier_invoice_no varchar(50),
-    total_amount INT DEFAULT 0,
+    total_amount FLOAT DEFAULT 0.0,
     status varchar(8) DEFAULT 'RECEIVED', -- 'PENDING', 'RECEIVED'
 
     purchase_date TIMESTAMPTZ DEFAULT NOW(),
@@ -164,7 +164,7 @@ CREATE TABLE purchase_items (
     product_id INT REFERENCES products(product_id),
 
     quantity INT NOT NULL,
-    buy_price INT NOT NULL, -- Cost per unit
+    buy_price FLOAT NOT NULL, -- Cost per unit
     expiry_date DATE, -- Critical for Mini Marts
 
     is_active BOOLEAN DEFAULT TRUE,
@@ -190,7 +190,7 @@ CREATE TABLE expenses (
     title TEXT NOT NULL,
     description TEXT,
 
-    amount INT NOT NULL, -- Money as Int
+    amount FLOAT NOT NULL, -- Money as Double
     expense_date DATE DEFAULT CURRENT_DATE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),

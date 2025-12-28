@@ -126,35 +126,37 @@ class _PurchaseManagementScreenState extends State<PurchaseManagementScreen> {
                             ? state.statusFilter
                             : null;
                         return DropdownButtonFormField<PurchaseStatus?>(
-                        value: statusFilter,
-                        decoration: InputDecoration(
-                          labelText: 'Filter by Status',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          value: statusFilter,
+                          decoration: InputDecoration(
+                            labelText: 'Filter by Status',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All Status'),
-                          ),
-                          ...PurchaseStatus.values.map((status) {
-                            return DropdownMenuItem(
-                              value: status,
-                              child: Text(status.displayName),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('All Status'),
+                            ),
+                            ...PurchaseStatus.values.map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Text(status.displayName),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: (status) {
+                            context.read<PurchaseCubit>().filterPurchases(
+                              status,
                             );
-                          }).toList(),
-                        ],
-                        onChanged: (status) {
-                          context.read<PurchaseCubit>().filterPurchases(status);
-                        },
-                      );
-                    },
-                  ),
+                          },
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
@@ -174,163 +176,164 @@ class _PurchaseManagementScreenState extends State<PurchaseManagementScreen> {
               Expanded(
                 child: BlocBuilder<PurchaseCubit, PurchaseState>(
                   builder: (context, state) {
-                  if (state is PurchaseLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                    if (state is PurchaseLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                  if (state is PurchaseError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error loading purchases',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey[600],
+                    if (state is PurchaseError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[400],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            state.message,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error loading purchases',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () =>
-                                context.read<PurchaseCubit>().loadPurchases(),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.message,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () =>
+                                  context.read<PurchaseCubit>().loadPurchases(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (state is! PurchaseLoaded) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final filteredPurchases = state.filteredPurchases;
+                    final totalAmount = filteredPurchases.fold<double>(
+                      0,
+                      (sum, purchase) => sum + purchase.purchase.totalAmount,
                     );
-                  }
+                    final pendingCount = filteredPurchases
+                        .where(
+                          (p) => p.purchase.status == PurchaseStatus.pending,
+                        )
+                        .length;
+                    final receivedCount = filteredPurchases
+                        .where(
+                          (p) => p.purchase.status == PurchaseStatus.received,
+                        )
+                        .length;
 
-                  if (state is! PurchaseLoaded) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final filteredPurchases = state.filteredPurchases;
-                  final totalAmount = filteredPurchases.fold<double>(
-                    0,
-                    (sum, purchase) =>
-                        sum + purchase.purchase.totalAmountDouble,
-                  );
-                  final pendingCount = filteredPurchases
-                      .where((p) => p.purchase.status == PurchaseStatus.pending)
-                      .length;
-                  final receivedCount = filteredPurchases
-                      .where(
-                        (p) => p.purchase.status == PurchaseStatus.received,
-                      )
-                      .length;
-
-                  return Column(
-                    children: [
-                      // Summary Cards
-                      Row(
-                        children: [
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Purchases',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                    return Column(
+                      children: [
+                        // Summary Cards
+                        Row(
+                          children: [
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total Purchases',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '\$${totalAmount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
+                                    Text(
+                                      '\$$totalAmount',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pending',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                            const SizedBox(width: 16),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Pending',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    pendingCount.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange,
+                                    Text(
+                                      pendingCount.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Received',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                            const SizedBox(width: 16),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Received',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    receivedCount.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
+                                    Text(
+                                      receivedCount.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      // Purchase Table
-                      Expanded(
-                        child: filteredPurchases.isEmpty
-                            ? _buildEmptyState(state.purchases.isEmpty)
-                            : _buildPurchaseTable(filteredPurchases),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // Purchase Table
+                        Expanded(
+                          child: filteredPurchases.isEmpty
+                              ? _buildEmptyState(state.purchases.isEmpty)
+                              : _buildPurchaseTable(filteredPurchases),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
           ),

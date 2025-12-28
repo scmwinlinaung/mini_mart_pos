@@ -449,7 +449,11 @@ class _PosScreenState extends State<PosScreen> {
                                   state.items.isEmpty
                               ? null
                               : () {
-                                  _handleCheckout(context, 'CASH');
+                                  _showPaymentConfirmation(
+                                    context,
+                                    'CASH',
+                                    state.grandTotal,
+                                  );
                                 },
                         ),
                       ),
@@ -478,8 +482,11 @@ class _PosScreenState extends State<PosScreen> {
                                   state.items.isEmpty
                               ? null
                               : () {
-                                  print('CARD button pressed');
-                                  _handleCheckout(context, 'CARD');
+                                  _showPaymentConfirmation(
+                                    context,
+                                    'CARD',
+                                    state.grandTotal,
+                                  );
                                 },
                         ),
                       ),
@@ -496,7 +503,7 @@ class _PosScreenState extends State<PosScreen> {
 
   Widget _buildSummaryRow(
     String label,
-    int amount,
+    double amount,
     BuildContext context, {
     bool isTotal = false,
   }) {
@@ -536,6 +543,168 @@ class _PosScreenState extends State<PosScreen> {
     return allItems.sublist(
       startIndex,
       endIndex > allItems.length ? allItems.length : endIndex,
+    );
+  }
+
+  void _showPaymentConfirmation(
+    BuildContext context,
+    String paymentMethod,
+    double totalAmount,
+  ) {
+    final authState = context.read<AuthCubit>().state;
+    final userId = authState.whenOrNull(
+      authenticated: (session) => session.user.userId,
+    );
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User not authenticated'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final isCash = paymentMethod == 'CASH';
+    final paymentIcon = isCash ? Icons.attach_money : Icons.credit_card;
+    final paymentColor = isCash ? Colors.green : Colors.blue;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(paymentIcon, color: paymentColor, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Confirm $paymentMethod Payment',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Payment Method:',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    paymentMethod,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: paymentColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Amount:',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    '\$ $totalAmount',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.grey.shade700,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isCash
+                            ? 'Please confirm the cash payment amount.'
+                            : 'Please confirm the card payment amount.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'CANCEL',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.read<CartCubit>().checkout(userId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: paymentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'CONFIRM',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

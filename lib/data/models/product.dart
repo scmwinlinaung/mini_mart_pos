@@ -16,8 +16,8 @@ class Product {
   final int unitTypeId;
   final String? unitCode;
   final String? unitName;
-  final int costPrice; // In cents
-  final int sellPrice; // In cents
+  final double costPrice; // In cents
+  final double sellPrice; // In cents
   final int stockQuantity;
   final int reorderLevel;
   final bool isActive;
@@ -58,8 +58,8 @@ class Product {
       unitTypeId: map['unit_type_id'] as int? ?? 1,
       unitCode: map['unit_code'] as String?,
       unitName: map['unit_name'] as String?,
-      costPrice: map['cost_price'] as int? ?? 0,
-      sellPrice: map['sell_price'] as int,
+      costPrice: map['cost_price'] as double? ?? 0,
+      sellPrice: map['sell_price'] as double,
       stockQuantity: map['stock_quantity'] as int? ?? 0,
       reorderLevel: map['reorder_level'] as int? ?? 10,
       isActive: map['is_active'] as bool? ?? true,
@@ -107,8 +107,8 @@ class Product {
     int? unitTypeId,
     String? unitCode,
     String? unitName,
-    int? costPrice,
-    int? sellPrice,
+    double? costPrice,
+    double? sellPrice,
     int? stockQuantity,
     int? reorderLevel,
     bool? isActive,
@@ -163,16 +163,16 @@ class Product {
 class CartItem {
   final Product product;
   final int quantity;
-  final int unitPrice; // Price at time of adding to cart (in cents)
+  final double unitPrice; // Price at time of adding to cart
 
-  CartItem({required this.product, required this.quantity, int? unitPrice})
+  CartItem({required this.product, required this.quantity, double? unitPrice})
     : unitPrice = unitPrice ?? product.sellPrice;
 
-  int get total => unitPrice * quantity;
-  String get formattedTotal => '\$$total';
-  String get formattedUnitPrice => '\$$unitPrice ';
+  double get total => unitPrice * quantity;
+  String get formattedTotal => '\$${total.toStringAsFixed(2)}';
+  String get formattedUnitPrice => '\$${unitPrice.toStringAsFixed(2)}';
 
-  CartItem copyWith({Product? product, int? quantity, int? unitPrice}) {
+  CartItem copyWith({Product? product, int? quantity, double? unitPrice}) {
     return CartItem(
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,

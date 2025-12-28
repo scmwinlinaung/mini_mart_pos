@@ -399,11 +399,14 @@ class DatabaseService {
     ''');
 
     await conn.execute('''
-      DROP TRIGGER IF EXISTS trg_sale_stock ON sale_items;
+      DROP TRIGGER IF EXISTS trg_sale_stock ON sale_items
+    ''');
+
+    await conn.execute('''
       CREATE TRIGGER trg_sale_stock
       AFTER INSERT ON sale_items
       FOR EACH ROW
-      EXECUTE FUNCTION fn_process_sale_stock();
+      EXECUTE FUNCTION fn_process_sale_stock()
     ''');
 
     // Trigger for automatic stock addition on purchase
@@ -427,11 +430,14 @@ class DatabaseService {
     ''');
 
     await conn.execute('''
-      DROP TRIGGER IF EXISTS trg_purchase_stock ON purchase_items;
+      DROP TRIGGER IF EXISTS trg_purchase_stock ON purchase_items
+    ''');
+
+    await conn.execute('''
       CREATE TRIGGER trg_purchase_stock
       AFTER INSERT ON purchase_items
       FOR EACH ROW
-      EXECUTE FUNCTION fn_process_purchase_stock();
+      EXECUTE FUNCTION fn_process_purchase_stock()
     ''');
   }
 

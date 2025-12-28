@@ -22,11 +22,20 @@ class DashboardData {
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert to double
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return DashboardData(
-      totalRevenue: (json['total_revenue'] ?? 0).toDouble() / 100, // Convert from cents
-      totalExpenses: (json['total_expenses'] ?? 0).toDouble() / 100,
-      totalProfit: (json['total_profit'] ?? 0).toDouble() / 100,
-      totalCost: (json['total_cost'] ?? 0).toDouble() / 100,
+      totalRevenue: toDouble(json['total_revenue']),
+      totalExpenses: toDouble(json['total_expenses']),
+      totalProfit: toDouble(json['total_profit']),
+      totalCost: toDouble(json['total_cost']),
       totalSales: json['total_sales'] ?? 0,
       totalProducts: json['total_products'] ?? 0,
       lowStockProducts: json['low_stock_products'] ?? 0,
@@ -58,11 +67,20 @@ class MonthlyData {
   });
 
   factory MonthlyData.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert to double
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return MonthlyData(
       month: json['month'] ?? '',
-      revenue: (json['revenue'] ?? 0).toDouble() / 100,
-      expenses: (json['expenses'] ?? 0).toDouble() / 100,
-      profit: (json['profit'] ?? 0).toDouble() / 100,
+      revenue: toDouble(json['revenue']),
+      expenses: toDouble(json['expenses']),
+      profit: toDouble(json['profit']),
       salesCount: json['sales_count'] ?? 0,
     );
   }
@@ -84,11 +102,20 @@ class YearlyData {
   });
 
   factory YearlyData.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert to double
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return YearlyData(
       year: json['year'] ?? 0,
-      revenue: (json['revenue'] ?? 0).toDouble() / 100,
-      expenses: (json['expenses'] ?? 0).toDouble() / 100,
-      profit: (json['profit'] ?? 0).toDouble() / 100,
+      revenue: toDouble(json['revenue']),
+      expenses: toDouble(json['expenses']),
+      profit: toDouble(json['profit']),
       salesCount: json['sales_count'] ?? 0,
     );
   }

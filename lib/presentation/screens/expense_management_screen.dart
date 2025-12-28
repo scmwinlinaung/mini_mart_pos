@@ -8,7 +8,8 @@ class ExpenseManagementScreen extends StatefulWidget {
   const ExpenseManagementScreen({Key? key}) : super(key: key);
 
   @override
-  State<ExpenseManagementScreen> createState() => _ExpenseManagementScreenState();
+  State<ExpenseManagementScreen> createState() =>
+      _ExpenseManagementScreenState();
 }
 
 class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
@@ -143,7 +144,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
     try {
       // TODO: Implement actual expense creation in database
-      final amountInCents = (double.parse(_amountController.text) * 100).round();
+      final amount = double.parse(_amountController.text);
       final newExpense = Expense(
         expenseId: _expenses.length + 1,
         categoryId: _selectedCategory?.categoryId ?? 7,
@@ -154,7 +155,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
-        amount: amountInCents,
+        amount: amount,
         expenseDate: _selectedDate ?? DateTime.now(),
         createdAt: DateTime.now(),
       );
@@ -253,10 +254,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
 
   void _showAddExpenseDialog() {
     _clearExpenseForm();
-    showDialog(
-      context: context,
-      builder: (context) => _buildExpenseDialog(),
-    );
+    showDialog(context: context, builder: (context) => _buildExpenseDialog());
   }
 
   void _hideExpenseDialog() {
@@ -375,10 +373,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             const SizedBox(height: 8),
             const Text(
               'This action cannot be undone.',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -422,15 +417,16 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   }
 
   double get _totalExpenses {
-    return _filteredExpenses.fold<double>(0, (sum, expense) => sum + expense.amountDouble);
+    return _filteredExpenses.fold<double>(
+      0.0,
+      (sum, expense) => sum + expense.amount,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return DesktopScaffold(
-      appBar: const DesktopAppBar(
-        title: 'Expense Management',
-      ),
+      appBar: const DesktopAppBar(title: 'Expense Management'),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -486,7 +482,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           ),
                         ),
                         Text(
-                          '\$${_totalExpenses.toStringAsFixed(2)}',
+                          '\$$_totalExpenses',
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -529,8 +525,8 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredExpenses.isEmpty
-                      ? _buildEmptyState()
-                      : _buildExpenseTable(),
+                  ? _buildEmptyState()
+                  : _buildExpenseTable(),
             ),
           ],
         ),
@@ -564,9 +560,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
             hasExpenses
                 ? 'Try adjusting your search terms'
                 : 'Add your first expense to get started',
-            style: TextStyle(
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(color: Colors.grey[500]),
           ),
           if (!hasExpenses) ...[
             const SizedBox(height: 24),
@@ -674,10 +668,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                 decoration: BoxDecoration(
                   color: index % 2 == 0 ? Colors.white : Colors.grey[50],
                   border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey[200]!,
-                      width: 1,
-                    ),
+                    bottom: BorderSide(color: Colors.grey[200]!, width: 1),
                   ),
                 ),
                 child: Row(

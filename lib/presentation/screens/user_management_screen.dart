@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/logic/user/user_cubit.dart';
 import '../../data/models/auth.dart';
+import '../../core/bloc/language/language_bloc.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/desktop_scaffold.dart';
 import '../widgets/language_selector.dart';
@@ -17,15 +18,9 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
-  void initState() {
-    super.initState();
-    context.read<UserCubit>().loadInitialData();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => UserCubit(),
+      create: (context) => UserCubit()..loadInitialData(),
       child: const UserManagementView(),
     );
   }
@@ -186,21 +181,27 @@ class UserForm extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Role
-                    DropdownButtonFormField<Role>(
-                      value: state.selectedRole,
-                      onChanged: (role) => context.read<UserCubit>().updateRole(role!),
-                      decoration: InputDecoration(
-                        labelText: AppStrings.role,
-                        hintText: AppStrings.selectRole,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.work),
-                      ),
-                      items: state.availableRoles.map((role) {
-                        return DropdownMenuItem<Role>(
-                          value: role,
-                          child: Text(role.name.toUpperCase()),
+                    Builder(
+                      builder: (context) {
+                        final languageCode = context.read<LanguageBloc>().state.getLanguageCode();
+
+                        return DropdownButtonFormField<Role>(
+                          value: state.selectedRole,
+                          onChanged: (role) => context.read<UserCubit>().updateRole(role!),
+                          decoration: InputDecoration(
+                            labelText: AppStrings.role,
+                            hintText: AppStrings.selectRole,
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.work),
+                          ),
+                          items: state.availableRoles.map((role) {
+                            return DropdownMenuItem<Role>(
+                              value: role,
+                              child: Text(role.getDisplayName(languageCode)),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
                     ),
                     const SizedBox(height: 16),
 
@@ -465,7 +466,7 @@ class UserList extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              user.role.name.toUpperCase(),
+                              _getRoleDisplayName(context, user.role),
                               style: TextStyle(
                                 color: _getRoleColor(user.role),
                                 fontWeight: FontWeight.bold,
@@ -563,6 +564,12 @@ class UserList extends StatelessWidget {
       case Role.cashier:
         return Colors.green;
     }
+  }
+
+  String _getRoleDisplayName(BuildContext context, Role role) {
+    final languageState = context.read<LanguageBloc>().state;
+    final languageCode = languageState.getLanguageCode();
+    return role.getDisplayName(languageCode);
   }
 
   void _showDeactivateConfirmation(BuildContext context, User user) {

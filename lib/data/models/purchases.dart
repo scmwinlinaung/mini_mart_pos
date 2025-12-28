@@ -8,7 +8,7 @@ class Purchase {
   final int userId;
   final String? userName;
   final String? supplierInvoiceNo;
-  final int totalAmount; // in cents
+  final double totalAmount;
   final PurchaseStatus status;
   final DateTime purchaseDate;
   final DateTime createdAt;
@@ -34,7 +34,7 @@ class Purchase {
       userId: map['user_id'] as int,
       userName: map['user_name'] as String?,
       supplierInvoiceNo: map['supplier_invoice_no'] as String?,
-      totalAmount: map['total_amount'] as int,
+      totalAmount: (map['total_amount'] as num?)?.toDouble() ?? 0.0,
       status: _parseStatus(map['status'] as String? ?? 'RECEIVED'),
       purchaseDate: DateTime.parse(map['purchase_date'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -70,8 +70,7 @@ class Purchase {
   }
 
   // Helper getters for UI
-  double get totalAmountDouble => totalAmount / 100.0;
-  String get formattedTotalAmount => '\$${(totalAmount / 100).toStringAsFixed(2)}';
+  String get formattedTotalAmount => '\$${totalAmount.toStringAsFixed(2)}';
   String get supplierDisplay => supplierName ?? 'Unknown Supplier';
   String get invoiceDisplay => supplierInvoiceNo ?? 'No Invoice #';
 
@@ -98,7 +97,7 @@ class PurchaseItem {
   final String? productName;
   final String? barcode;
   final int quantity;
-  final int buyPrice; // Cost per unit in cents
+  final double buyPrice; // Cost per unit
   final DateTime? expiryDate;
 
   PurchaseItem({
@@ -120,7 +119,7 @@ class PurchaseItem {
       productName: map['product_name'] as String?,
       barcode: map['barcode'] as String?,
       quantity: map['quantity'] as int,
-      buyPrice: map['buy_price'] as int,
+      buyPrice: (map['buy_price'] as num).toDouble(),
       expiryDate: map['expiry_date'] != null
           ? DateTime.parse(map['expiry_date'] as String)
           : null,
@@ -141,11 +140,9 @@ class PurchaseItem {
   }
 
   // Helper getters for UI
-  double get buyPriceDouble => buyPrice / 100.0;
-  String get formattedBuyPrice => '\$${(buyPrice / 100).toStringAsFixed(2)}';
-  int get total => buyPrice * quantity;
-  double get totalDouble => total / 100.0;
-  String get formattedTotal => '\$${(total / 100).toStringAsFixed(2)}';
+  String get formattedBuyPrice => '\$${buyPrice.toStringAsFixed(2)}';
+  double get total => buyPrice * quantity;
+  String get formattedTotal => '\$${total.toStringAsFixed(2)}';
   String get expiryDisplay => expiryDate != null
       ? '${expiryDate!.day}/${expiryDate!.month}/${expiryDate!.year}'
       : 'No expiry';
@@ -188,7 +185,7 @@ class PurchaseWithItems {
 
   int get totalItems => items.length;
   int get totalQuantity => items.fold<int>(0, (sum, item) => sum + item.quantity);
-  double get totalValue => purchase.totalAmountDouble;
+  double get totalValue => purchase.totalAmount;
 
   String get supplierDisplay => supplier?.companyName ?? purchase.supplierDisplay;
   bool get hasExpiringItems => items.any((item) => item.isExpiringSoon);

@@ -47,7 +47,7 @@ class Expense {
   final String? userName;
   final String title;
   final String? description;
-  final int amount; // in cents
+  final double amount;
   final DateTime expenseDate;
   final DateTime createdAt;
 
@@ -73,7 +73,7 @@ class Expense {
       userName: map['user_name'] as String?,
       title: map['title'] as String,
       description: map['description'] as String?,
-      amount: map['amount'] as int,
+      amount: (map['amount'] as num).toDouble(),
       expenseDate: DateTime.parse(map['expense_date'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
@@ -95,8 +95,7 @@ class Expense {
   }
 
   // Helper getters for UI
-  double get amountDouble => amount / 100.0;
-  String get formattedAmount => '\$${(amount / 100).toStringAsFixed(2)}';
+  String get formattedAmount => '\$${amount.toStringAsFixed(2)}';
   String get categoryDisplay => categoryName ?? 'Unknown Category';
   String get expenseDateDisplay => '${expenseDate.day}/${expenseDate.month}/${expenseDate.year}';
   String get createdAtDisplay => '${createdAt.day}/${createdAt.month}/${createdAt.year}';
@@ -155,9 +154,9 @@ class ExpenseWithCategory {
 
 class ExpenseSummary {
   final DateTime period;
-  final int totalExpenses; // in cents
+  final double totalExpenses;
   final int expenseCount;
-  final Map<String, int> expensesByCategory; // category name -> amount
+  final Map<String, double> expensesByCategory; // category name -> amount
   final List<Expense> recentExpenses;
 
   ExpenseSummary({
@@ -169,13 +168,12 @@ class ExpenseSummary {
   });
 
   // Helper getters for UI
-  double get totalExpensesDouble => totalExpenses / 100.0;
-  String get formattedTotalExpenses => '\$${(totalExpenses / 100).toStringAsFixed(2)}';
+  String get formattedTotalExpenses => '\$${totalExpenses.toStringAsFixed(2)}';
   String get periodDisplay => '${period.month}/${period.year}';
 
   String? get topCategory {
     if (expensesByCategory.isEmpty) return null;
-    var maxAmount = 0;
+    var maxAmount = 0.0;
     String? topCategoryName;
 
     expensesByCategory.forEach((category, amount) {
@@ -190,7 +188,7 @@ class ExpenseSummary {
 
   double get topCategoryAmount {
     if (expensesByCategory.isEmpty) return 0.0;
-    var maxAmount = 0;
+    var maxAmount = 0.0;
 
     expensesByCategory.forEach((category, amount) {
       if (amount > maxAmount) {
@@ -198,7 +196,7 @@ class ExpenseSummary {
       }
     });
 
-    return maxAmount / 100.0;
+    return maxAmount;
   }
 
   @override
